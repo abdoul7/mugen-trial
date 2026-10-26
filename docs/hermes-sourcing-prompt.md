@@ -26,7 +26,9 @@ SITE RULES — NON-NEGOTIABLE
 
 HOW TO CHOOSE A VERSION
 - Search "<name> JUS" first, then just "<name>".
-- Read "File Size" on each file page. Prefer archives under 25 MB; never take one over 40 MB.
+- Read "File Size" on each file page. Prefer archives under 15 MB; never take one over 30 MB.
+  After extracting, the sprite file (.sff) should be 10 MB or less: batch 1 showed 15-30 MB
+  JUS characters run slow even on the PC. Skip anything already in reports/jf-archives.csv.
 - Prefer JUS / POTS / CvS style, base form (no "all forms" packs), single character.
 - Known good picks: Luffy TS JUS – Sektor (14.3 MB, AK1 file 56847), Renji Abarai (5.9 MB, file 16703).
 - Already rejected: Goku SSJ2 JUS by 此赤非彼枫 (file 61679), sprites 70 MB.
@@ -38,7 +40,8 @@ AFTER EACH DOWNLOAD
    Never run anything from inside an extracted archive.
 3. Run  python -I handoff/tools/scan_mugen_build.py source/jf
    and  python -I tools/check_char_refs.py source/jf
-4. Accept only LIKELY OK (or TEST IT with sprite file < 20 MB) with no MISSING files.
+4. Accept only LIKELY OK (or TEST IT with sprite file <= 10 MB) with no MISSING files.
+   Faster alternative to steps 2-3: .venv/Scripts/python.exe tools/ingest_chars.py <folder>
    Otherwise reject it with the exact reason (sprite size, audio, missing file, hi-res
    localcoord, trans = sub).
 5. Add a row to reports/jf-sourcing.md:

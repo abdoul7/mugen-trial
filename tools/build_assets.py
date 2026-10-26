@@ -70,6 +70,9 @@ def exact_case(folder, name):
     return "/".join(parts)
 
 
+KEEP = object()  # roster entry has no "localcoord": leave the character's own value alone
+
+
 def patch_char_def(def_path, localcoord, overrides=None):
     folder = os.path.dirname(def_path)
     text = read(def_path)
@@ -84,7 +87,7 @@ def patch_char_def(def_path, localcoord, overrides=None):
         if kv and kv.group(2).lower() in overrides:
             line = f"{kv.group(1)}{kv.group(2)} = {overrides[kv.group(2).lower()]}"
             changes.append(f"{kv.group(2)}: {kv.group(4).strip()!r} -> {overrides[kv.group(2).lower()]!r}")
-        elif kv and section == "info" and kv.group(2).lower() == "localcoord":
+        elif kv and section == "info" and kv.group(2).lower() == "localcoord" and localcoord is not KEEP:
             if localcoord is None:
                 changes.append(f"removed localcoord {kv.group(4)}")
                 continue
@@ -93,6 +96,9 @@ def patch_char_def(def_path, localcoord, overrides=None):
         elif kv and section == "files" and FILE_KEY.match(kv.group(2)) and kv.group(4).strip():
             v = kv.group(4).strip().strip('"')
             fixed = exact_case(folder, v)
+            if fixed is None and re.match(r"pal\d+$", kv.group(2), re.I):
+                changes.append(f"dropped missing {kv.group(2)} = {v}")  # palette lives in the SFF v2
+                continue
             if fixed and fixed != v:
                 line = f"{kv.group(1)}{kv.group(2)}{kv.group(3)}{fixed}{kv.group(5)}"
                 changes.append(f"{kv.group(2)}: {v} -> {fixed}")
@@ -149,7 +155,7 @@ def main():
         if c.get("source") == "stock":
             entry = c.get("def", cid)
         else:
-            src = os.path.join(demo, "Chars", c["folder"])
+            src = os.path.join(ROOT, c["root"], c["folder"]) if "root" in c else os.path.join(demo, "Chars", c["folder"])
             dst = os.path.join(ASSETS, "chars", cid)
             shutil.copytree(src, dst)
             for rel_src, rel_dst in c.get("copy_files", []):  # e.g. a common*.cns the char expects
@@ -165,7 +171,7 @@ def main():
                         os.remove(os.path.join(dp, f))
                         dropped += 1
             def_path = os.path.join(dst, c["def"])
-            changes = patch_char_def(def_path, c.get("localcoord"), c.get("def_overrides"))
+            changes = patch_char_def(def_path, c["localcoord"] if "localcoord" in c else KEEP, c.get("def_overrides"))
             snd = re.search(r"(?im)^\s*sound\s*=\s*([^;\r\n]+)", read(def_path))
             if snd and not no_shrink:
                 sp = os.path.join(dst, snd.group(1).strip())
@@ -210,6 +216,23 @@ def main():
              "team.maxmatches = 4,1,1,0,0,0,0,0,0,0", ""]
     write(os.path.join(ASSETS, "data", "select.def"), "\n".join(lines))
     log(f"5. select.def: {len(select_chars)} characters, {len(extra_stages)} stages")
+
+    slots = len(select_chars) + (1 if cfg.get("randomselect") else 0)
+    if cfg.get("motif") != "tbm":
+        # stock motif ships a 2x5 grid (27px cells + 2px spacing, 320x240 screen): widen it to 10
+        # columns and add rows from the bottom up so every character gets a box
+        cols = 10 if slots > 10 else 5
+        rows = -(-slots // cols)
+        sysdef = os.path.join(ASSETS, "data", "system.def")
+        t = read(sysdef)
+        grid = {"rows": rows, "columns": cols, "pos": f"{(320 - cols * 29) // 2},{min(170, 236 - rows * 29)}",
+                "p2.cursor.startcell": f"0,{cols - 1}"}
+        sel = re.search(r"(?is)\[Select Info\](.*?)(?=\n\[)", t)
+        body = sel.group(1)
+        for k, v in grid.items():
+            body = re.sub(rf"(?im)^(\s*{re.escape(k)}\s*=\s*)[^;\n]*", lambda m, v=v: f"{m.group(1)}{v}", body)
+        write(sysdef, t[:sel.start(1)] + body + t[sel.end(1):])
+        log(f"6. stock select grid -> {rows}x{cols} for {slots} slots")
 
     if cfg.get("motif") == "tbm":
         fonts = port_motif.port(ASSETS, len(select_chars) + (1 if cfg.get("randomselect") else 0))

@@ -103,6 +103,168 @@
       "drop_files": [
         "final"
       ]
+    },
+    {
+      "id": "android_17",
+      "root": "source/jf",
+      "folder": "android_17/Android 17",
+      "def": "Android 17.def",
+      "source_note": "AK1 download (Android 17.zip), triage TEST: big sprites 17.3 MB; 132x trans=sub (not implemented on Vita: some effects will look wrong); snd 23.3 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "android_21_1_1",
+      "root": "source/jf",
+      "folder": "android_21_1_1/Android 21",
+      "def": "Android 21.def",
+      "source_note": "AK1 download (Android 21 1.1.rar), triage TEST: big sprites 22.9 MB; 24x trans=sub (not implemented on Vita: some effects will look wrong); snd 24.0 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "android_18_1",
+      "root": "source/jf",
+      "folder": "android_18_1/Android_18",
+      "def": "Android_18.def",
+      "source_note": "AK1 download (Android_18 (1).rar), triage TEST: big sprites 25.8 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 7.9 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      }
+    },
+    {
+      "id": "baby_vegeta",
+      "root": "source/jf",
+      "folder": "baby_vegeta/Baby Vegeta",
+      "def": "Baby Vegeta.def",
+      "source_note": "AK1 download (Baby_Vegeta.rar), triage TEST: big sprites 18.3 MB; 48x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.9 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "drop_files": [
+        "backup"
+      ]
+    },
+    {
+      "id": "bardock_ssj",
+      "root": "source/jf",
+      "folder": "bardock_ssj/Bardock SSJ",
+      "def": "Bardock SSJ.def",
+      "source_note": "AK1 download (Bardock_SSJ.zip), triage TEST: big sprites 28.4 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 17.3 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      }
+    },
+    {
+      "id": "garou_hunters",
+      "root": "source/jf",
+      "folder": "garou_hunters/Garou-Hunters",
+      "def": "Garou-Hunters.def",
+      "source_note": "AK1 download (Garou-Hunters.rar), triage TEST: 7x trans=sub (not implemented on Vita: some effects will look wrong)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/ship.def"
+      }
+    },
+    {
+      "id": "goku_black_ssr",
+      "root": "source/jf",
+      "folder": "goku_black_ssr/Goku Black (SSR)",
+      "def": "Goku Black (SSR).def",
+      "source_note": "AK1 download (Goku Black (SSR).rar), triage TEST: big sprites 23.8 MB; 74x trans=sub (not implemented on Vita: some effects will look wrong); snd 28.2 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "kefla",
+      "root": "source/jf",
+      "folder": "kefla/Kefla",
+      "def": "Kefla.def",
+      "source_note": "AK1 download (Kefla.rar), triage TEST: big sprites 22.9 MB; 82x trans=sub (not implemented on Vita: some effects will look wrong); snd 40.7 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "metal_bat",
+      "root": "source/jf",
+      "folder": "metal_bat/Metal Bat",
+      "def": "Metal Bat.def",
+      "source_note": "AK1 download (Metal_Bat.rar), triage TEST: big sprites 16.2 MB; 46x trans=sub (not implemented on Vita: some effects will look wrong); snd 18.3 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/ship.def"
+      }
+    },
+    {
+      "id": "sasuke_hebi_white",
+      "root": "source/jf",
+      "folder": "sasuke_hebi_white/Sasuke_Hebi_White",
+      "def": "Sasuke_Hebi_White.def",
+      "source_note": "AK1 download (Sasuke_Hebi_White.rar), triage TEST: big sprites 22.5 MB; 6x trans=sub (not implemented on Vita: some effects will look wrong); snd 6.7 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kof96goe.def"
+      }
+    },
+    {
+      "id": "tank_top_master",
+      "root": "source/jf",
+      "folder": "tank_top_master/Tank-top-master",
+      "def": "Tank-top-master.def",
+      "source_note": "AK1 download (Tank-top-master.rar), triage TEST: big sprites 21.5 MB; 2x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.6 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/ship.def"
+      }
+    },
+    {
+      "id": "tenshinhan_saga_cell",
+      "root": "source/jf",
+      "folder": "tenshinhan_saga_cell/Tenshinhan Saga Cell",
+      "def": "Tenshinhan Saga Cell.def",
+      "source_note": "AK1 download (Tenshinhan Saga Cell.rar), triage TEST: big sprites 20.1 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      }
+    },
+    {
+      "id": "vegito_ssb",
+      "root": "source/jf",
+      "folder": "vegito_ssb/Vegito (SSB)",
+      "def": "Vegito (SSB).def",
+      "source_note": "AK1 download (Vegito (SSB).zip), triage TEST: big sprites 16.0 MB; 75x trans=sub (not implemented on Vita: some effects will look wrong); missing palette files dropped: pal1=1.act; snd 30.0 MB (will be shrunk)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/janshell.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "madara_revived",
+      "root": "source/jf",
+      "folder": "madara_revived/Madara Revived",
+      "def": "Madara Revived.def",
+      "source_note": "AK1 download (Madara_Revived.zip), triage REJECT: sprites 31.0 MB (> 30)",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kof96goe.def"
+      }
     }
   ],
   "snd_rate": 22050,
@@ -132,6 +294,22 @@
           "def": "TheLastBlade/KaedeStage-dm.def",
           "music": "Sound/TheLastBlade/KaedeStage-dm.mp3"
         }
+      }
+    },
+    {
+      "id": "gohan_teen_1_1",
+      "reason": "engine error on load: Dolmexica cannot parse its command inputs ($UF etc.); 2026-10-27 soak",
+      "entry": {
+        "id": "gohan_teen_1_1",
+        "root": "source/jf",
+        "folder": "gohan_teen_1_1/Gohan (Teen)",
+        "def": "Gohan (Teen).def",
+        "source_note": "AK1 download (Gohan (Teen) 1.1.rar), triage TEST: big sprites 16.8 MB; 145x trans=sub (not implemented on Vita: some effects will look wrong); missing palette files dropped: pal1=1.act; snd 28.5 MB (will be shrunk)",
+        "stage": {
+          "source": "stock",
+          "def": "stages/janshell.def"
+        },
+        "snd_rate": 16000
       }
     }
   ]

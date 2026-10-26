@@ -43,12 +43,26 @@ python -m venv .venv
 - Never sign in, create accounts or enter credentials. Never download from the commercial
   Jump Force game or rip sites. Never run anything from inside a downloaded archive.
 
+## Getting the AK1 characters the roster uses
+
+`roster.json` entries with `"root": "source/jf"` come from AK1 archives that are **not** in
+this repo. `reports/jf-archives.csv` lists each one's filename, byte size and SHA-256.
+Download the same files from AK1 (by hand, see the website rules), put them in one folder, run
+
+```bash
+.venv/Scripts/python.exe tools/ingest_chars.py "<that folder>"
+```
+
+and check the SHA-256s match. A character whose archive you don't have will fail
+`build_assets.py`; comment it out of `roster.json` locally rather than committing that.
+
 ## Character acceptance
 
 `python -I handoff/tools/scan_mugen_build.py source/jf` must say LIKELY OK (or TEST IT with
 sprites < 20 MB), `tools/check_char_refs.py` must show no MISSING files, and the character
-must survive `tools/soak_test.py <id>`. Archive guide: under ~25 MB. (The Vita heap is
-96 MB total; a 96 MB Goku SSJ2 JUS was rejected for a 70 MB sprite file.)
+must survive `tools/soak_test.py <id>` (result `OK`, not `ENGINE ERROR`). Size guide for new
+picks: sprites (`.sff`) **≤ 10 MB**. The batch-1 JUS characters at 15–30 MB pass on Windows
+but run visibly slow there, and the Vita heap is 96 MB total.
 
 ## Status
 

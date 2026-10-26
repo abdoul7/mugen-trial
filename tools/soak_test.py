@@ -104,6 +104,16 @@ def shot(pid, path):
     return True
 
 
+def is_error_screen(path):
+    img = Image.open(path).convert("RGB")
+    w, h = img.size
+    px = list(img.resize((w // 4, h // 4)).getdata())
+    dark = sum(1 for r, g, b in px if r + g + b < 40) / len(px)
+    head = img.crop((0, 0, w, h // 8)).getdata()  # full resolution: the red text is 1-2 px thin
+    red = sum(1 for r, g, b in head if r > 180 and g < 80 and b < 80)
+    return dark > 0.85 and red > 200
+
+
 def roster():
     chars, stages, sec = [], [], ""
     for line in read(os.path.join(DATA, "select.def")).splitlines():
@@ -144,6 +154,12 @@ def run_one(label, select_text, secs, endtime, select_enabled):
     if alive:
         p.kill()
         p.wait()
+    # the engine reports script/asset failures on a black screen headed by red text
+    # ("AN ERROR HAS OCCURED. LOG OUTPUT:") and keeps running, so check the last shot
+    shots = sorted(f for f in os.listdir(out) if f.endswith(".png"))
+    if alive and shots and is_error_screen(os.path.join(out, shots[-1])):
+        return {"label": label, "result": "ENGINE ERROR (see screenshots)", "seconds": int(time.time() - t0),
+                "peak_mb": round(peak / 2**20), "shots": n}
     return {"label": label, "result": "OK" if alive else f"EXITED code={p.returncode}",
             "seconds": int(time.time() - t0), "peak_mb": round(peak / 2**20), "shots": n}
 
