@@ -4,12 +4,14 @@ vita/make_vita.bat, with this project's name/TitleID and our own LiveArea art).
 
     python tools/make_vpk.py                       # dist/JFVT00001.vpk
     python tools/make_vpk.py --version 01.01
+    python tools/make_vpk.py --self build/engine/DolmexicaInfinite.self   # engine built from
+                                       # source by tools/engine/build_vita.sh instead of the kit's
 
 Steps:
   1. draw icon0.png (128x128), bg.png (840x500), startup.png (280x158) as 8-bit indexed PNGs
      -- the Vita rejects LiveArea images that are not palettised
   2. param.sfo with TITLE_ID (exactly 9 chars, else install error 0xF0030000) -- tools/sfo.py
-  3. zip: eboot.bin (prebuilt DolmexicaInfinite.self) + sce_sys + the whole assets/ tree
+  3. zip: eboot.bin (the kit's prebuilt DolmexicaInfinite.self, or --self) + sce_sys + assets/
 """
 
 import os
@@ -59,6 +61,11 @@ def panel(w, h, title, sub=None):
 
 def main():
     version = sys.argv[sys.argv.index("--version") + 1] if "--version" in sys.argv else "01.00"
+    engine = os.path.join(VITA, "common", "DolmexicaInfinite.self")
+    if "--self" in sys.argv:
+        engine = os.path.abspath(sys.argv[sys.argv.index("--self") + 1])
+    with open(engine, "rb") as f:
+        assert f.read(4) == b"SCE\0", f"{engine} is not a SELF"
     sce = os.path.join(VITA, "common", "sce_sys")
     panel(128, 128, "JF").save(os.path.join(sce, "icon0.png"), optimize=True)
     panel(840, 500, "JUMP FORCE", "M.U.G.E.N  ·  Dolmexica Infinite").save(os.path.join(sce, "livearea", "contents", "bg.png"), optimize=True)
@@ -76,7 +83,7 @@ def main():
     assets = os.path.join(VITA, "..", "assets")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("sce_sys/param.sfo", param)
-        z.write(os.path.join(VITA, "common", "DolmexicaInfinite.self"), "eboot.bin")
+        z.write(engine, "eboot.bin")
         for rel in ("icon0.png", "livearea/contents/bg.png", "livearea/contents/startup.png", "livearea/contents/template.xml"):
             z.write(os.path.join(sce, rel), f"sce_sys/{rel}")
         for dp, _, fs in os.walk(assets):
@@ -88,7 +95,8 @@ def main():
     os.makedirs(DIST, exist_ok=True)
     final = os.path.join(DIST, f"{TITLE_ID}.vpk")
     shutil.copy2(out, final)
-    print(f"wrote {final} ({os.path.getsize(final) / 2**20:.1f} MB), TitleID {TITLE_ID}, version {version}")
+    print(f"wrote {final} ({os.path.getsize(final) / 2**20:.1f} MB), TitleID {TITLE_ID}, version {version}, "
+          f"engine {os.path.relpath(engine, ROOT)}")
 
 
 if __name__ == "__main__":

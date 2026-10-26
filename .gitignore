@@ -5,7 +5,7 @@
 # downloaded archives and their extracted contents
 downloads/
 source/
-engine/
+/engine/
 
 # generated
 build/
