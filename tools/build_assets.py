@@ -7,6 +7,9 @@ Re-runnable: it wipes build/game and recreates it, so every change lives in this
     python tools/build_assets.py            # build build/game
     python tools/build_assets.py --no-music # skip the MP3 -> OGG step (fast rebuilds)
     python tools/build_assets.py --no-shrink # keep character .snd files untouched
+    python tools/build_assets.py --skip-missing # leave out characters whose source folder is
+                                                # absent (e.g. AK1 archives you haven't got)
+    python tools/build_assets.py --motif tbm    # override roster.json's "motif" for this build
 
 What it does, in order:
   1. copies the Dolmexica 1.8 engine (Windows exe + Vita kit + stock assets) to build/game
@@ -143,6 +146,9 @@ def main():
         cfg = json.load(f)
     music = "--no-music" not in sys.argv
     no_shrink = "--no-shrink" in sys.argv
+    skip_missing = "--skip-missing" in sys.argv
+    if "--motif" in sys.argv:  # try a motif without editing roster.json
+        cfg["motif"] = sys.argv[sys.argv.index("--motif") + 1]
     demo = os.path.join(ROOT, cfg["demo_root"])
     music_cache = os.path.join(ROOT, "build", "ogg-cache")
 
@@ -156,6 +162,9 @@ def main():
             entry = c.get("def", cid)
         else:
             src = os.path.join(ROOT, c["root"], c["folder"]) if "root" in c else os.path.join(demo, "Chars", c["folder"])
+            if skip_missing and not os.path.isdir(src):
+                log(f"2. char {cid:10s} SKIPPED: {os.path.relpath(src, ROOT)} not found (--skip-missing)")
+                continue
             dst = os.path.join(ASSETS, "chars", cid)
             shutil.copytree(src, dst)
             for rel_src, rel_dst in c.get("copy_files", []):  # e.g. a common*.cns the char expects

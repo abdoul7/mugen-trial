@@ -32,7 +32,10 @@
       the 15–30 MB JUS characters run noticeably slow even on the PC.
       Prompt: `docs/hermes-sourcing-prompt.md`. Known small picks: Luffy TS JUS – Sektor, Renji Abarai.
 - [ ] **Uchiha Obito:** re-download — the owner's .zip.001+.002 are 21 MB short of what the zip declares.
-- [ ] **Motif (T4):** set `"motif": "tbm"` in `roster.json`, build, screenshot title / select /
-      fight HUD, then decide whether to keep the TBM look or the stock one.
+- [x] **Motif (T4) spike:** done on Windows, see `reports/motif-t4.md`. Recommendation: **stock motif
+      for M1**. Full TBM can't fit the Vita (fight HUD alone ~135 MB of 32-bit textures at best),
+      and the port draws a black title because Dolmexica only reads `[Files] spr`.
+- [ ] **Owner:** accept the T4 call, or ask for a TBM-lite port (merged + downscaled SFFs, static
+      backgrounds, TBM lifebars only; a day or more of work plus a Vita check).
 - [ ] Stages: the 14 new characters reuse 3 existing stages; give them their own series stages.
 - [ ] `trans = sub` effects (most JUS characters) are not implemented on Vita — check how they look on hardware.
