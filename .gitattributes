@@ -1,0 +1,3 @@
+# shell scripts and patches run inside WSL/Linux: keep LF even on Windows checkouts
+*.sh text eol=lf
+*.patch text eol=lf

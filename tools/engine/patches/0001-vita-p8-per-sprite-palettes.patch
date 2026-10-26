@@ -1,0 +1,217 @@
+diff --git a/prism/include/prism/texture.h b/prism/include/prism/texture.h
+index 451dd0a..6a35c32 100644
+--- a/prism/include/prism/texture.h
++++ b/prism/include/prism/texture.h
+@@ -36,6 +36,9 @@ TextureData loadTextureFromTwiddledARGB16Buffer(const Buffer& b, int tWidth, int
+ TextureData loadTextureFromARGB32Buffer(const Buffer& b, int tWidth, int tHeight);
+ TextureData loadTextureFromRawPNGBuffer(const Buffer& b, int tWidth, int tHeight);
+ TextureData loadPalettedTextureFrom8BitBuffer(const Buffer& b, int tPaletteID, int tWidth, int tHeight);
++#if defined(VITA)
++TextureData loadPalettedTextureFrom8BitBufferWithOwnPalette(const Buffer& b, const Buffer& tPalette, int tWidth, int tHeight);
++#endif
+ void unloadTexture(TextureData& tTexture);
+ 
+ void loadConsecutiveTextures(TextureData* tDst, const char* tBaseFileDir, int tAmount);
+diff --git a/prism/mugenspritefilereader.cpp b/prism/mugenspritefilereader.cpp
+index c1d9766..0974a44 100644
+--- a/prism/mugenspritefilereader.cpp
++++ b/prism/mugenspritefilereader.cpp
+@@ -280,6 +280,11 @@ static TextureData loadTextureFromPalettedImageData1bpp(const Buffer& tPCXImageB
+ 	if (isOnDreamcast() || gPrismMugenSpriteFileReaderData.mIsWritingDreamcastOptimized) {
+ 		return loadTextureFromPalettedImageData1bppTo16ARGB(tPCXImageBuffer, tPaletteBuffer, w, h);
+ 	}
++#if defined(VITA)
++	else if (!gPrismMugenSpriteFileReaderData.mCustomLoadTextureFromARGB32Buffer) {
++		return loadPalettedTextureFrom8BitBufferWithOwnPalette(tPCXImageBuffer, tPaletteBuffer, w, h);
++	}
++#endif
+ 	else {
+ 		return loadTextureFromPalettedImageData1bppTo32ARGB(tPCXImageBuffer, tPaletteBuffer, w, h);
+ 	}
+diff --git a/prism/vita/drawing_vita.cpp b/prism/vita/drawing_vita.cpp
+index 42033c3..5cc3853 100644
+--- a/prism/vita/drawing_vita.cpp
++++ b/prism/vita/drawing_vita.cpp
+@@ -1,3 +1,6 @@
++#include <map>
++#include <string>
++#include <vector>
+ #include "../include/prism/drawing.h"
+ 
+ #include <stdlib.h>
+@@ -26,6 +29,21 @@ namespace prism {
+ 		SceUID mID;
+ 	};
+ 
++	// [JFV] Palettes 0-3 are the engine's fixed ones (P1, P2, stage, fight HUD). IDs from 4 up are
++	// per-sprite palettes: an 8-bit sprite that brings its own palette keeps a P8 texture (1 B/px) and
++	// gets one of these, instead of being expanded to ARGB32 (4 B/px). Identical palettes are shared
++	// and reference-counted; they live in 256 KB CDRAM pages (256 palettes each).
++	static const int VITA_FIXED_PALETTE_AMOUNT = 4;
++	static const int VITA_PALETTE_SIZE = 256 * sizeof(uint32_t);
++	static const int VITA_PALETTES_PER_PAGE = 256;
++	static std::vector<VitaPalette> gVitaPaletteTable;
++	static std::vector<int> gVitaPaletteReferenceCount;
++	static std::vector<std::string> gVitaPaletteKey;
++	static std::vector<int> gVitaFreePaletteIDs;
++	static std::map<std::string, int> gVitaPaletteByKey;
++	static std::vector<VitaPalette> gVitaPalettePages;
++	static int gVitaPalettePageFill = VITA_PALETTES_PER_PAGE;
++
+ 	typedef struct {
+ 
+ 		float a;
+@@ -168,24 +186,89 @@ namespace prism {
+ 
+ 	static void initPalettes()
+ 	{
+-		for (int i = 0; i < 4; i++)
++		gVitaPaletteTable.resize(VITA_FIXED_PALETTE_AMOUNT);
++		gVitaPaletteReferenceCount.assign(VITA_FIXED_PALETTE_AMOUNT, 1);
++		gVitaPaletteKey.assign(VITA_FIXED_PALETTE_AMOUNT, std::string());
++		for (int i = 0; i < VITA_FIXED_PALETTE_AMOUNT; i++)
+ 		{
+ 			const int paletteSize = 256 * sizeof(uint32_t);
+ 
+-			gPrismWindowsDrawingData.mPalettes[i].mBuffer = vitaGpuAlloc(
++			gVitaPaletteTable[i].mBuffer = vitaGpuAlloc(
+ 				SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW,
+ 				paletteSize,
+ 				SCE_GXM_PALETTE_ALIGNMENT,
+ 				SCE_GXM_MEMORY_ATTRIB_READ | SCE_GXM_MEMORY_ATTRIB_WRITE,
+-				&gPrismWindowsDrawingData.mPalettes[i].mID);
++				&gVitaPaletteTable[i].mID);
+ 
+-			if (!gPrismWindowsDrawingData.mPalettes[i].mBuffer) {
++			if (!gVitaPaletteTable[i].mBuffer) {
+ 				logErrorFormat("Unable to allocate palette %d", i);
+ 				abortSystem();
+ 			}
+ 
+-			memset(gPrismWindowsDrawingData.mPalettes[i].mBuffer, 0, paletteSize);
++			memset(gVitaPaletteTable[i].mBuffer, 0, paletteSize);
++		}
++	}
++
++	static int allocateVitaDynamicPaletteID() {
++		if (!gVitaFreePaletteIDs.empty()) {
++			const int id = gVitaFreePaletteIDs.back();
++			gVitaFreePaletteIDs.pop_back();
++			return id;
++		}
++		if (gVitaPalettePageFill == VITA_PALETTES_PER_PAGE) {
++			VitaPalette page;
++			page.mBuffer = vitaGpuAlloc(SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW, VITA_PALETTE_SIZE * VITA_PALETTES_PER_PAGE,
++				SCE_GXM_PALETTE_ALIGNMENT, SCE_GXM_MEMORY_ATTRIB_READ | SCE_GXM_MEMORY_ATTRIB_WRITE, &page.mID);
++			if (!page.mBuffer) {
++				logErrorFormat("[Palette] Unable to allocate palette page %d", (int)gVitaPalettePages.size());
++				abortSystem();
++			}
++			gVitaPalettePages.push_back(page);
++			gVitaPalettePageFill = 0;
++			debugFormat("[Palette] palette page %d allocated", (int)gVitaPalettePages.size());
++		}
++		VitaPalette e;
++		e.mBuffer = (uint8_t*)gVitaPalettePages.back().mBuffer + VITA_PALETTE_SIZE * gVitaPalettePageFill;
++		e.mID = gVitaPalettePages.back().mID;
++		gVitaPalettePageFill++;
++		gVitaPaletteTable.push_back(e);
++		gVitaPaletteReferenceCount.push_back(0);
++		gVitaPaletteKey.push_back(std::string());
++		return int(gVitaPaletteTable.size()) - 1;
++	}
++
++	// Returns a palette ID holding tPalette (RGB 768 B or ARGB 1024 B, as in an SFF), converted
++	// exactly as the fixed palettes are (setPaletteFrom*), so the colours match the old ARGB32 path.
++	int acquireVitaPaletteForBuffer(const Buffer& tPalette) {
++		std::string key((const char*)tPalette.mData, tPalette.mLength);
++		auto it = gVitaPaletteByKey.find(key);
++		if (it != gVitaPaletteByKey.end()) {
++			gVitaPaletteReferenceCount[it->second]++;
++			return it->second;
+ 		}
++		const int id = allocateVitaDynamicPaletteID();
++		if (tPalette.mLength == 256 * 3) {
++			setPaletteFromBGR256WithFirstValueTransparentBuffer(id, tPalette);
++		}
++		else {
++			setPaletteFromARGB256Buffer(id, tPalette);
++		}
++		gVitaPaletteReferenceCount[id] = 1;
++		gVitaPaletteKey[id] = key;
++		gVitaPaletteByKey[key] = id;
++		return id;
++	}
++
++	void releaseVitaPalette(int tPaletteID) {
++		if (tPaletteID < VITA_FIXED_PALETTE_AMOUNT || tPaletteID >= int(gVitaPaletteTable.size())) return;
++		if (--gVitaPaletteReferenceCount[tPaletteID] > 0) return;
++		gVitaPaletteByKey.erase(gVitaPaletteKey[tPaletteID]);
++		gVitaPaletteKey[tPaletteID].clear();
++		gVitaFreePaletteIDs.push_back(tPaletteID);
++	}
++
++	int getVitaDynamicPaletteAmount() {
++		return int(gVitaPaletteByKey.size());
+ 	}
+ 
+ 	void initDrawing() {
+@@ -321,7 +404,7 @@ namespace prism {
+ 
+ 		if (tHasPalette)
+ 		{
+-			sceGxmTextureSetPalette(&tTexture->gxm_tex, gPrismWindowsDrawingData.mPalettes[tPaletteID].mBuffer);
++			sceGxmTextureSetPalette(&tTexture->gxm_tex, gVitaPaletteTable[tPaletteID].mBuffer);
+ 		}
+ 
+ 		vita2d_set_blend_mode_add((int)tData->mBlendType);
+@@ -618,7 +701,7 @@ namespace prism {
+ 		assert(tBuffer.mLength == 256 * 4);
+ 
+ 		uint8_t* src = (uint8_t*)tBuffer.mData;
+-		uint8_t* dst = (uint8_t*)gPrismWindowsDrawingData.mPalettes[tPaletteID].mBuffer;
++		uint8_t* dst = (uint8_t*)gVitaPaletteTable[tPaletteID].mBuffer;
+ 		memcpy(dst, src, tBuffer.mLength);
+ 	}
+ 
+@@ -627,7 +710,7 @@ namespace prism {
+ 		assert(tBuffer.mLength == 256 * 3);
+ 
+ 		uint8_t* src = (uint8_t*)tBuffer.mData;
+-		uint8_t* dst = (uint8_t*)gPrismWindowsDrawingData.mPalettes[tPaletteID].mBuffer;
++		uint8_t* dst = (uint8_t*)gVitaPaletteTable[tPaletteID].mBuffer;
+ 		for (int i = 0; i < 256; i++) {
+ 			dst[4 * i + 0] = i == 0 ? 0 : 255;
+ 			dst[4 * i + 1] = src[3 * i + 2];
+diff --git a/prism/vita/texture_vita.cpp b/prism/vita/texture_vita.cpp
+index 7f9f402..ea26c6a 100644
+--- a/prism/vita/texture_vita.cpp
++++ b/prism/vita/texture_vita.cpp
+@@ -159,7 +159,13 @@ namespace prism {
+ 		}
+ 	}
+ 
++	int acquireVitaPaletteForBuffer(const Buffer& tPalette);
++	void releaseVitaPalette(int tPaletteID);
++
+ 	void unloadTexture(TextureData& tTexture) {
++		if (tTexture.mHasPalette) {
++			releaseVitaPalette(tTexture.mPaletteID); // [JFV] no-op for the fixed palettes 0-3
++		}
+ 		freeTextureMemory(tTexture.mTexture);
+ 	}
+ 
+@@ -411,6 +417,13 @@ namespace prism {
+ 		return returnData;
+ 	}
+ 
++	// [JFV] 8-bit image with its own palette -> P8 texture + shared per-sprite palette (1 B/px)
++	// instead of the ARGB32 expansion in mugenspritefilereader.cpp (4 B/px)
++	TextureData loadPalettedTextureFrom8BitBufferWithOwnPalette(const Buffer& b, const Buffer& tPalette, int tWidth, int tHeight) {
++		const int paletteID = acquireVitaPaletteForBuffer(tPalette);
++		return loadPalettedTextureFrom8BitBuffer(b, paletteID, tWidth, tHeight);
++	}
++
+ 	static std::string getSystemFontFile(const std::string& tFaceName) {
+ 		return "C:/Windows/Fonts/" + tFaceName;
+ 	}
