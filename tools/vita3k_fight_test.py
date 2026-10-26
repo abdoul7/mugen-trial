@@ -118,6 +118,9 @@ def run(p1, p2, ids, secs):
             p.kill()
             p.wait()
         log.close()
+    if os.path.exists(LOG):
+        import shutil
+        shutil.copy(LOG, os.path.join(out, "prismlog.txt"))  # the engine's own log, per run
     pngs = sorted(f for f in os.listdir(out) if f.endswith(".png"))
     result = "CRASH (emulator exited)" if crashed else "ran"
     if not crashed and pngs and soak_test.is_error_screen(os.path.join(out, pngs[-1])):
