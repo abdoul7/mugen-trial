@@ -18,6 +18,13 @@
 - [ ] **Owner:** install `dist/JFVT00001.vpk` v00.02 on the Vita and report: boots? select
       screen? which matchups load? frame rate? Most AK1 characters peak at 400–800 MB on
       Windows versus 210–370 MB for the demo ones, so expect heavy ones to fail.
+- [x] **Vita memory model:** `tools/vita_mem.py`, findings in `reports/vita-memory.md`. Every AK1
+      character needs 185-832 MB of textures per fighter (the engine turns their per-sprite-palette
+      art into 32-bit textures; 60-75% of it is a few huge cut-in/aura sprites). Only the demo/stock
+      characters are plausible on the Vita as things stand.
+- [ ] **Engine:** set up the Dolmexica build (VitaSDK) and implement the memory fixes from
+      `reports/vita-memory.md`: P8 textures with per-sprite palettes (~4x), drawing downscaled
+      oversized sprites at their original size, sharing sprites in mirror matches.
 - [ ] **Engine (T6):** if the Vita runs out of memory on load, rebuild Dolmexica with
       `_newlib_heap_size_user` 96 → 144 MB (`main.cpp:38-40`), via VitaSDK in Docker.
 - [ ] **Sourcing:** the actual Jump Force headliners are still missing (Goku, Vegeta, Luffy,
