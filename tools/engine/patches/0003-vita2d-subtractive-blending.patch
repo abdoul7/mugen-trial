@@ -1,0 +1,71 @@
+diff --git a/vita2d/libvita2d/source/vita2d.c b/vita2d/libvita2d/source/vita2d.c
+index d64988e..9b967f9 100644
+--- a/vita2d/libvita2d/source/vita2d.c
++++ b/vita2d/libvita2d/source/vita2d.c
+@@ -134,6 +134,7 @@ typedef struct vita2d_fragment_programs {
+ struct {
+ 	vita2d_fragment_programs blend_mode_normal;
+ 	vita2d_fragment_programs blend_mode_add;
++	vita2d_fragment_programs blend_mode_sub; // [JFV] MUGEN trans = sub
+ } _vita2d_fragmentPrograms;
+ 
+ // Temporary memory pool
+@@ -508,12 +509,26 @@ static int vita2d_init_internal(unsigned int temp_pool_size, SceGxmMultisampleMo
+ 		.colorMask = SCE_GXM_COLOR_MASK_ALL
+ 	};
+ 
++	// [JFV] additive: dst + src * srcAlpha, so fully transparent texels (palette index 0) add
++	// nothing (was src * 1, which added the colour of masked pixels too)
+ 	static const SceGxmBlendInfo blend_info_add = {
+ 		.colorFunc = SCE_GXM_BLEND_FUNC_ADD,
+ 		.alphaFunc = SCE_GXM_BLEND_FUNC_ADD,
+-		.colorSrc  = SCE_GXM_BLEND_FACTOR_ONE,
++		.colorSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
++		.colorDst  = SCE_GXM_BLEND_FACTOR_ONE,
++		.alphaSrc  = SCE_GXM_BLEND_FACTOR_ZERO,
++		.alphaDst  = SCE_GXM_BLEND_FACTOR_ONE,
++		.colorMask = SCE_GXM_COLOR_MASK_ALL
++	};
++
++	// [JFV] subtractive (MUGEN trans = sub): dst - src * srcAlpha. Before this, callers asking
++	// for subtraction got the additive programs, which drew bright boxes instead of shadows.
++	static const SceGxmBlendInfo blend_info_sub = {
++		.colorFunc = SCE_GXM_BLEND_FUNC_REVERSE_SUBTRACT,
++		.alphaFunc = SCE_GXM_BLEND_FUNC_ADD,
++		.colorSrc  = SCE_GXM_BLEND_FACTOR_SRC_ALPHA,
+ 		.colorDst  = SCE_GXM_BLEND_FACTOR_ONE,
+-		.alphaSrc  = SCE_GXM_BLEND_FACTOR_ONE,
++		.alphaSrc  = SCE_GXM_BLEND_FACTOR_ZERO,
+ 		.alphaDst  = SCE_GXM_BLEND_FACTOR_ONE,
+ 		.colorMask = SCE_GXM_COLOR_MASK_ALL
+ 	};
+@@ -663,6 +678,7 @@ static int vita2d_init_internal(unsigned int temp_pool_size, SceGxmMultisampleMo
+ 	// Create variations of the fragment program based on blending mode
+ 	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_normal, &blend_info, msaa);
+ 	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_add, &blend_info_add, msaa);
++	_vita2d_make_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_sub, &blend_info_sub, msaa);
+ 
+ 	// Default to "normal" blending mode (non-additive)
+ 	vita2d_set_blend_mode_add(0);
+@@ -746,6 +762,7 @@ int vita2d_fini()
+ 
+ 	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_normal);
+ 	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_add);
++	_vita2d_free_fragment_programs(&_vita2d_fragmentPrograms.blend_mode_sub);
+ 
+ 	gpu_free(linearIndicesUid);
+ 	gpu_free(clearVerticesUid);
+@@ -1072,9 +1089,12 @@ void vita2d_pool_reset()
+ 	pool_index = 0;
+ }
+ 
++// [JFV] 0 = normal, 2 = subtract, any other non-zero = add. prism passes its BlendType here
++// (NORMAL 0, ADDITION 1, SUBTRACTION 2), so subtraction now works without touching prism.
+ void vita2d_set_blend_mode_add(int enable)
+ {
+-	vita2d_fragment_programs *in = enable ? &_vita2d_fragmentPrograms.blend_mode_add
++	vita2d_fragment_programs *in = enable == 2 ? &_vita2d_fragmentPrograms.blend_mode_sub
++	    : enable ? &_vita2d_fragmentPrograms.blend_mode_add
+ 	    : &_vita2d_fragmentPrograms.blend_mode_normal;
+ 
+ 	_vita2d_colorFragmentProgram = in->color;

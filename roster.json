@@ -15,17 +15,6 @@
       }
     },
     {
-      "id": "kfm720",
-      "folder": "Original/kfm720",
-      "def": "kfm720.def",
-      "localcoord": "1280,720",
-      "stage": {
-        "id": "kfm720",
-        "def": "Original/kfm.def",
-        "music": "Sound/Original/kfm.mp3"
-      }
-    },
-    {
       "id": "pupa",
       "folder": "Rage of The Dragons/Pupa",
       "def": "Pupa.def",
@@ -93,9 +82,8 @@
       "def": "janemba.def",
       "localcoord": null,
       "stage": {
-        "id": "janshell",
-        "def": "Dragonball/janembashell.def",
-        "music": "Sound/Dragonball/Dragon Ball Z BGM - M2017 Janemba Reincarnates.mp3"
+        "source": "stock",
+        "def": "stages/kfm.def"
       },
       "def_overrides": {
         "ending.storyboard": ""
@@ -112,7 +100,7 @@
       "source_note": "AK1 download (Android 17.zip), triage TEST: big sprites 17.3 MB; 132x trans=sub (not implemented on Vita: some effects will look wrong); snd 23.3 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/sfa3akuma.def"
       },
       "snd_rate": 16000
     },
@@ -124,7 +112,7 @@
       "source_note": "AK1 download (Android 21 1.1.rar), triage TEST: big sprites 22.9 MB; 24x trans=sub (not implemented on Vita: some effects will look wrong); snd 24.0 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/kof96goe.def"
       },
       "snd_rate": 16000
     },
@@ -136,7 +124,7 @@
       "source_note": "AK1 download (Android_18 (1).rar), triage TEST: big sprites 25.8 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 7.9 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/rschool.def"
       }
     },
     {
@@ -147,7 +135,7 @@
       "source_note": "AK1 download (Baby_Vegeta.rar), triage TEST: big sprites 18.3 MB; 48x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.9 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/ship.def"
       },
       "drop_files": [
         "backup"
@@ -161,7 +149,7 @@
       "source_note": "AK1 download (Bardock_SSJ.zip), triage TEST: big sprites 28.4 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 17.3 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/snorlax.def"
       }
     },
     {
@@ -183,7 +171,7 @@
       "source_note": "AK1 download (Goku Black (SSR).rar), triage TEST: big sprites 23.8 MB; 74x trans=sub (not implemented on Vita: some effects will look wrong); snd 28.2 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/kfm.def"
       },
       "snd_rate": 16000
     },
@@ -195,7 +183,7 @@
       "source_note": "AK1 download (Kefla.rar), triage TEST: big sprites 22.9 MB; 82x trans=sub (not implemented on Vita: some effects will look wrong); snd 40.7 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/sfa3akuma.def"
       },
       "snd_rate": 16000
     },
@@ -240,7 +228,7 @@
       "source_note": "AK1 download (Tenshinhan Saga Cell.rar), triage TEST: big sprites 20.1 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/kof96goe.def"
       }
     },
     {
@@ -251,7 +239,7 @@
       "source_note": "AK1 download (Vegito (SSB).zip), triage TEST: big sprites 16.0 MB; 75x trans=sub (not implemented on Vita: some effects will look wrong); missing palette files dropped: pal1=1.act; snd 30.0 MB (will be shrunk)",
       "stage": {
         "source": "stock",
-        "def": "stages/janshell.def"
+        "def": "stages/rschool.def"
       },
       "snd_rate": 16000
     },
@@ -310,6 +298,21 @@
           "def": "stages/janshell.def"
         },
         "snd_rate": 16000
+      }
+    },
+    {
+      "id": "kfm720",
+      "reason": "select screen: its 1280x720 portraits (100x100 icon, 480x560 big) are drawn unscaled over the grid on the 320x240 stock motif -- the 'Kung Fu Man face stuck on screen' bug seen on the Vita (2026-10-26). Duplicate of stock KFM anyway.",
+      "entry": {
+        "id": "kfm720",
+        "folder": "Original/kfm720",
+        "def": "kfm720.def",
+        "localcoord": "1280,720",
+        "stage": {
+          "id": "kfm720",
+          "def": "Original/kfm.def",
+          "music": "Sound/Original/kfm.mp3"
+        }
       }
     }
   ]

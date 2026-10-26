@@ -1,0 +1,131 @@
+diff --git a/prism/include/prism/texture.h b/prism/include/prism/texture.h
+index 6a35c32..bc4764b 100644
+--- a/prism/include/prism/texture.h
++++ b/prism/include/prism/texture.h
+@@ -38,6 +38,7 @@ TextureData loadTextureFromRawPNGBuffer(const Buffer& b, int tWidth, int tHeight
+ TextureData loadPalettedTextureFrom8BitBuffer(const Buffer& b, int tPaletteID, int tWidth, int tHeight);
+ #if defined(VITA)
+ TextureData loadPalettedTextureFrom8BitBufferWithOwnPalette(const Buffer& b, const Buffer& tPalette, int tWidth, int tHeight);
++void setVitaMaximumTextureDimension(int tMaximum);
+ #endif
+ void unloadTexture(TextureData& tTexture);
+ 
+diff --git a/prism/vita/texture_vita.cpp b/prism/vita/texture_vita.cpp
+index ea26c6a..4c65833 100644
+--- a/prism/vita/texture_vita.cpp
++++ b/prism/vita/texture_vita.cpp
+@@ -346,6 +346,41 @@ namespace prism {
+ 		return ret;
+ 	}
+ 
++	// [JFV] Sprites whose width or height is above this cap are stored downscaled by an integer
++	// factor (nearest neighbour) while TextureData keeps the ORIGINAL size. drawing_vita.cpp
++	// computes texture coordinates relative to mTextureSize, so they are still drawn at full size,
++	// just with fewer texels. Set only while fighter sprites load (playerdefinition.cpp); 0 = off.
++	static int gVitaMaximumTextureDimension = 0;
++
++	void setVitaMaximumTextureDimension(int tMaximum) {
++		gVitaMaximumTextureDimension = tMaximum;
++	}
++
++	static int getVitaTextureDownscaleFactor(int tWidth, int tHeight) {
++		const int largest = tWidth > tHeight ? tWidth : tHeight;
++		if (gVitaMaximumTextureDimension <= 0 || largest <= gVitaMaximumTextureDimension) return 1;
++		return (largest + gVitaMaximumTextureDimension - 1) / gVitaMaximumTextureDimension;
++	}
++
++	// copy a tWidth x tHeight image (tBytesPerPixel each) into the texture, keeping every k-th pixel
++	static void copyImageIntoVitaTexture(vita2d_texture* tTexture, const uint8_t* tSource, int tWidth, int tHeight, int tBytesPerPixel, int k) {
++		auto data = (uint8_t*)vita2d_texture_get_datap(tTexture);
++		auto textureStride = vita2d_texture_get_stride(tTexture);
++		const int physicalWidth = (tWidth + k - 1) / k;
++		const int physicalHeight = (tHeight + k - 1) / k;
++		for (int y = 0; y < physicalHeight; y++) {
++			const uint8_t* sourceRow = tSource + size_t(y) * k * tWidth * tBytesPerPixel;
++			uint8_t* targetRow = data + size_t(textureStride) * y;
++			if (k == 1) {
++				memcpy(targetRow, sourceRow, size_t(tWidth) * tBytesPerPixel);
++				continue;
++			}
++			for (int x = 0; x < physicalWidth; x++) {
++				memcpy(targetRow + x * tBytesPerPixel, sourceRow + size_t(x) * k * tBytesPerPixel, tBytesPerPixel);
++			}
++		}
++	}
++
+ 	TextureData loadTextureFromARGB32Buffer(const Buffer& b, int tWidth, int tHeight) {
+ 		TextureData returnData;
+ 		returnData.mTexture = allocTextureMemory(sizeof(VitaTextureData));
+@@ -353,17 +388,9 @@ namespace prism {
+ 		returnData.mTextureSize.y = tHeight;
+ 		returnData.mHasPalette = 0;
+ 		Texture texture = (Texture)returnData.mTexture->mData;
+-		texture->mTexture = createVitaTextureOrAbort(tWidth, tHeight, SCE_GXM_TEXTURE_FORMAT_A8R8G8B8);
+-
+-		auto data = vita2d_texture_get_datap(texture->mTexture);
+-		auto textureStride = vita2d_texture_get_stride(texture->mTexture);
+-		auto bufferStride = tWidth * sizeof(uint32_t);
+-		for (int y = 0; y < tHeight; y++)
+-		{
+-			auto targetMem = ((char*)data) + (textureStride * y);
+-			auto sourceMem = ((char*)b.mData) + (bufferStride * y);
+-			memcpy(targetMem, sourceMem, bufferStride);	
+-		}
++		const int k = getVitaTextureDownscaleFactor(tWidth, tHeight);
++		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_A8R8G8B8);
++		copyImageIntoVitaTexture(texture->mTexture, (const uint8_t*)b.mData, tWidth, tHeight, 4, k);
+ 
+ 		texture->mTexture->palette_UID = 0;
+ 		texture->mTexture->depth_UID = 0; // not zeroed in vita2d apparently
+@@ -398,17 +425,9 @@ namespace prism {
+ 		returnData.mHasPalette = 1;
+ 		returnData.mPaletteID = tPaletteID;
+ 		Texture texture = (Texture)returnData.mTexture->mData;
+-		texture->mTexture = createVitaTextureOrAbort(tWidth, tHeight, SCE_GXM_TEXTURE_FORMAT_P8_RGBA);
+-
+-		auto data = vita2d_texture_get_datap(texture->mTexture);
+-		auto textureStride = vita2d_texture_get_stride(texture->mTexture);
+-		auto bufferStride = tWidth;
+-		for (int y = 0; y < tHeight; y++)
+-		{
+-			auto targetMem = ((char*)data) + (textureStride * y);
+-			auto sourceMem = ((char*)b.mData) + (bufferStride * y);
+-			memcpy(targetMem, sourceMem, bufferStride);
+-		}
++		const int k = getVitaTextureDownscaleFactor(tWidth, tHeight);
++		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_P8_RGBA);
++		copyImageIntoVitaTexture(texture->mTexture, (const uint8_t*)b.mData, tWidth, tHeight, 1, k);
+ 		
+ 		texture->mTexture->palette_UID = 0;
+ 		texture->mTexture->depth_UID = 0; // not zeroed by default in vita2d apparently
+diff --git a/repo/playerdefinition.cpp b/repo/playerdefinition.cpp
+index 33fa89c..ceda8c9 100644
+--- a/repo/playerdefinition.cpp
++++ b/repo/playerdefinition.cpp
+@@ -18,6 +18,12 @@
+ #include <prism/input.h>
+ #include <prism/soundeffect.h>
+ #include <prism/collisionhandler.h>
++#include <prism/texture.h>
++
++// [JFV] fighter sprites wider/taller than this are stored downscaled on Vita (patch 0002)
++#ifndef JFV_FIGHTER_MAX_SPRITE_DIMENSION
++#define JFV_FIGHTER_MAX_SPRITE_DIMENSION 512
++#endif
+ 
+ #include "mugencommandreader.h"
+ #include "mugenstatereader.h"
+@@ -498,7 +504,13 @@ void loadPlayers(MemoryStack* tMemoryStack) {
+ 
+ static void loadSinglePlayerSprites(DreamPlayer* tPlayer) {
+ 	setMugenSpriteFileReaderToUsePalette(tPlayer->mRootID);
++#ifdef VITA
++	setVitaMaximumTextureDimension(JFV_FIGHTER_MAX_SPRITE_DIMENSION);
++#endif
+ 	tPlayer->mHeader->mFiles.mSprites = loadMugenSpriteFile(tPlayer->mHeader->mFiles.mSpritePath, tPlayer->mHeader->mFiles.mHasPalettePath, tPlayer->mHeader->mFiles.mPalettePath);
++#ifdef VITA
++	setVitaMaximumTextureDimension(0);
++#endif
+ 	setMugenSpriteFileReaderToNotUsePalette();
+ 	logMemoryState();
+ 

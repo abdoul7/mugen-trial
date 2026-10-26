@@ -9,6 +9,7 @@
 #               engine's memory/texture-slab messages are written on the Vita
 #   --heap MB   newlib heap size (repo/main.cpp:40, default 96)
 #   --stock     don't apply tools/engine/patches/*.patch (plain 1.8 engine)
+#   --sprite-cap N  fighter sprites larger than N px are stored downscaled (patch 0002, default 512)
 #
 # Steps: copy sources to a Linux-side work dir (case-sensitive, fast, CRLF -> LF),
 # build libdrakonsound.a (CaptainDreamcast/VitaSound, branch Feature/LibraryConversion,
@@ -27,11 +28,13 @@ export PATH="$VITASDK/bin:$PATH"
 DEBUG=0
 HEAP=96
 PATCHES=1
+SPRITE_CAP=512
 while [ $# -gt 0 ]; do
   case "$1" in
     --debug) DEBUG=1 ;;
     --heap) HEAP="$2"; shift ;;
     --stock) PATCHES=0 ;;
+    --sprite-cap) SPRITE_CAP="$2"; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
   shift
@@ -42,11 +45,19 @@ VITASOUND_REF=1da3f25cd3b3642ce111dd8663b7dab6f967f94f   # Feature/LibraryConver
 if [ ! -d "$SRC/vitasound" ]; then
   git clone -q -b Feature/LibraryConversion "$VITASOUND_URL" "$SRC/vitasound"
 fi
+# vita2d is rebuilt from the exact commit VitaSDK packages (libvita2d 0.0.0.r188.ga8f15ab) so our
+# patches (0003: subtractive blending) can be applied to it
+VITA2D_URL=https://github.com/xerpi/libvita2d
+VITA2D_REF=a8f15ab
+if [ ! -d "$SRC/vita2d" ]; then
+  git clone -q "$VITA2D_URL" "$SRC/vita2d"
+  git -C "$SRC/vita2d" checkout -q "$VITA2D_REF"
+fi
 
 echo "== copy sources -> $WORK"
 rm -rf "$WORK"
 mkdir -p "$WORK"
-for d in repo prism vitasound; do
+for d in repo prism vitasound vita2d; do
   tar -C "$SRC" --exclude=.git -cf - "$d" | tar -C "$WORK" -xf -
 done
 # Makefiles/CMakeLists/sources come with CRLF from Windows checkouts
@@ -63,7 +74,12 @@ if [ "$PATCHES" = 1 ]; then
   done
 fi
 
-echo "== engine options: heap ${HEAP} MB, debug log ${DEBUG}"
+if grep -q "define JFV_FIGHTER_MAX_SPRITE_DIMENSION" "$WORK/repo/playerdefinition.cpp"; then
+  sed -i "s/^#define JFV_FIGHTER_MAX_SPRITE_DIMENSION [0-9]*/#define JFV_FIGHTER_MAX_SPRITE_DIMENSION ${SPRITE_CAP}/" "$WORK/repo/playerdefinition.cpp"
+else
+  SPRITE_CAP="n/a"
+fi
+echo "== engine options: heap ${HEAP} MB, debug log ${DEBUG}, fighter sprite cap ${SPRITE_CAP}"
 sed -i "s/_newlib_heap_size_user = [0-9]* \* 1024 \* 1024;/_newlib_heap_size_user = ${HEAP} * 1024 * 1024;/" "$WORK/repo/main.cpp"
 grep -q "_newlib_heap_size_user = ${HEAP} \* 1024 \* 1024;" "$WORK/repo/main.cpp"
 if [ "$DEBUG" = 1 ]; then
@@ -77,6 +93,15 @@ echo "== libdrakonsound"
 C_COMPAT="-Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration"
 make -C "$WORK/vitasound" -j"$JOBS" CFLAGS="-Wl,-q -O2 -std=c99 -I./Nogg -I./include $C_COMPAT" >/dev/null 2>"$WORK/vitasound.log" \
   || { tail -30 "$WORK/vitasound.log"; exit 1; }
+
+echo "== libvita2d (patched, replaces the packaged one)"
+command -v arm-vita-eabi-gcc >/dev/null
+[ -d "$VITASDK/arm-vita-eabi/include/freetype2" ] || vdpm install freetype >/dev/null
+# vita2d_image_jpeg.c uses ceil() without <math.h> (an error since GCC 14): force-include it
+V2D_CFLAGS="-Wl,-q -Wall -O3 -Iinclude -I$VITASDK/arm-vita-eabi/include/freetype2 -ffat-lto-objects -flto -include math.h"
+make -C "$WORK/vita2d/libvita2d" -j"$JOBS" CFLAGS="$V2D_CFLAGS" >/dev/null 2>"$WORK/vita2d.log" \
+  || { grep -E "error" "$WORK/vita2d.log" | head -30; exit 1; }
+make -C "$WORK/vita2d/libvita2d" CFLAGS="$V2D_CFLAGS" install >/dev/null
 
 echo "== libprism"
 make -C "$WORK/prism" -f Makefile.vita -j"$JOBS" >/dev/null 2>"$WORK/prism.log" \
@@ -102,10 +127,12 @@ cp "$WORK/repo/vita/build/DolmexicaInfinite.self" "$OUT/"
   echo "dolmexica: $(git -C "$SRC/repo" rev-parse --short HEAD 2>/dev/null || echo ?)"
   echo "prism: $(git -C "$SRC/prism" rev-parse --short HEAD 2>/dev/null || echo ?)"
   echo "vitasound: $(git -C "$SRC/vitasound" rev-parse --short HEAD 2>/dev/null || echo ?) (want ${VITASOUND_REF:0:7})"
+  echo "vita2d: $(git -C "$SRC/vita2d" rev-parse --short HEAD 2>/dev/null || echo ?) (want ${VITA2D_REF})"
   echo "vitasdk: $(head -1 "$VITASDK/version_info.txt" 2>/dev/null || echo ?)"
   echo "gcc: $(arm-vita-eabi-gcc --version | head -1)"
   echo "heap_mb: $HEAP"
   echo "debug_log: $DEBUG"
+  echo "fighter_sprite_cap: $SPRITE_CAP"
   echo "patches:${APPLIED:- none}"
   echo "self_bytes: $(stat -c %s "$OUT/DolmexicaInfinite.self")"
 } > "$OUT/build-info.txt"

@@ -234,8 +234,18 @@ def main():
         rows = -(-slots // cols)
         sysdef = os.path.join(ASSETS, "data", "system.def")
         t = read(sysdef)
-        grid = {"rows": rows, "columns": cols, "pos": f"{(320 - cols * 29) // 2},{min(170, 236 - rows * 29)}",
+        top = min(170, 236 - rows * 29)
+        grid = {"rows": rows, "columns": cols, "pos": f"{(320 - cols * 29) // 2},{top}",
                 "p2.cursor.startcell": f"0,{cols - 1}"}
+        if top < 170:
+            # the stock layout puts 120x140 portraits at y=13 and the names/stage at y=162/237: a taller
+            # grid would run over them, so shrink the portraits to end above the name line, and put the
+            # names in the gap just above the grid (the stage name goes under the title: long names reach the middle)
+            label_y = top - 6
+            face = round(min(1.0, (label_y - 12 - 13) / 140), 2)
+            grid.update({"p1.face.scale": f"{face},{face}", "p2.face.scale": f"{face},{face}",
+                         "p1.name.offset": f"10,{label_y}", "p2.name.offset": f"309,{label_y}",
+                         "stage.pos": "160,30"})  # under the title, between the portraits
         sel = re.search(r"(?is)\[Select Info\](.*?)(?=\n\[)", t)
         body = sel.group(1)
         for k, v in grid.items():

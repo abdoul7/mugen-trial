@@ -36,6 +36,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "build", "game", "assets")
 MB = 2 ** 20
+CAPS = (1024, 768, 640, 512)  # candidate max sprite dimensions for the downscale what-if
 
 
 def read(p):
@@ -67,6 +68,7 @@ class Cost:
         self.too_big = []      # sprites > 4096 px: engine aborts
         self.bad_format = []   # RLE5 etc.: engine error
         self.engine_p8 = 0     # what-if: engine keeps every 8-bit sprite as P8 + its own palette
+        self.engine_p8_cap = {}  # what-if: P8 + fighter sprites larger than N px stored downscaled
         self.reorder = None    # what-if (SFF v1): main-palette sprites written first
 
     @property
@@ -77,7 +79,11 @@ class Cost:
         if w > 4096 or h > 4096:
             self.too_big.append(key)
             return
-        self.engine_p8 += tex_bytes(w, h, 1 if paletted else 4) + (1024 if paletted and not eight else 0)
+        bpp = 1 if paletted else 4
+        self.engine_p8 += tex_bytes(w, h, bpp) + (1024 if paletted and not eight else 0)
+        for cap in CAPS:
+            k = -(-max(w, h) // cap)  # integer downscale factor (patch 0002)
+            self.engine_p8_cap[cap] = self.engine_p8_cap.get(cap, 0) + tex_bytes(-(-w // k), -(-h // k), bpp)
         if eight:
             self.p8 += tex_bytes(w, h, 1)
             self.n8 += 1
@@ -233,6 +239,10 @@ def main():
               f"{p1.p8 / MB:6.1f}/{p1.argb / MB:6.1f} {r['nopal'].total / MB:7.1f} "
               f"{(p1.reorder / MB if p1.reorder is not None else float('nan')):8.1f} {p1.engine_p8 / MB:7.1f} "
               f"{r['snd_heap'] / MB:8.1f} {r['script_kb'] / 1024:8.1f} {mirror:7.1f}  {'; '.join(flags)}")
+    print("\nwith engine P8 + downscaling fighter sprites larger than N px (texture MB per fighter):")
+    print(f"{'id':22} " + " ".join(f"{'<=' + str(c):>8}" for c in CAPS))
+    for r in rows:
+        print(f"{r['id']:22} " + " ".join(f"{r['p1'].engine_p8_cap.get(c, 0) / MB:8.1f}" for c in CAPS))
     if "--csv" in sys.argv:
         import csv
         out = sys.argv[sys.argv.index("--csv") + 1]
