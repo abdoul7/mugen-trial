@@ -31,3 +31,45 @@ Everyone else on `handoff/roster/jumpforce-roster.md`. AK1 started answering aut
 searches with HTTP 429 + an interactive Cloudflare check after ~10 searches, so the lookup
 has to go slowly, with the check cleared by a person.
 The three Jump Force originals (Galena, Kane, Prometheus) almost certainly have no MUGEN versions.
+
+## 2026-10-26 — blocked at AK1 (Cloudflare), nothing downloaded
+
+- First lookup of the session: `files/file/56847-luffy-ts-jus-sektor/`.
+- The response was Cloudflare's "Performing security verification" interstitial
+  (Ray ID `a50ba9b7ed50a2bb`), not the file page.
+- Per `AGENTS.md`: stopped immediately. No retry, no alternate route, no attempt to solve
+  the check.
+- Consequence: **no archives were fetched this session.** The two entries previously listed
+  as "known good picks" are still *candidates only* — neither has been downloaded, triaged
+  or soaked.
+- This matches the earlier observation that AK1 starts answering with 429 + an interactive
+  check after roughly ten searches. Plan for 2–4 short sessions with the check cleared in
+  between, not one long run.
+
+## Tool validation (2026-10-26, against 10 real characters)
+
+Both acceptance tools were run against the 10 characters extracted from the TBM demo before
+trusting them on AK1 downloads:
+
+- `handoff/tools/scan_mugen_build.py` → 9 × LIKELY OK, 1 × TEST IT (Shiki Nanaya: 5.6 MB
+  sprites, 44 MB audio). Two defects found and fixed in the copy now in `handoff/`:
+  1. values were not split on `;`, so `mugenversion` came back as `04.14.2001` (the trailing
+     comment) instead of the real version — every character looked like an unknown engine;
+  2. "team/tag triggers" was weighted −20, but most WinMUGEN-era characters ship optional
+     tag code that is harmless in 1v1; this alone rejected good characters. Now −6 and
+     relabelled "team/tag code present".
+- `tools/check_char_refs.py` → no MISSING files on the same 10 characters, and on a copy
+  with one `.sff` deliberately deleted it reports `MISSING sprite = <file>` as expected.
+
+## Two things to settle before the next sourcing batch
+
+1. **The prompt is looser than `AGENTS.md`.** `docs/hermes-sourcing-prompt.md` step 4 accepts
+   on triage + reference check alone, while `AGENTS.md` also requires
+   `tools/soak_test.py <id>` to pass. The soak is the only gate that catches broken states
+   and dead AI. Nothing was accepted this session, so nothing slipped through — but the
+   prompt should be brought in line before the next batch.
+2. **Judge on unpacked size, not archive size.** Evidence from the demo set: sprites run
+   0.9–5.6 MB while one character carried 44 MB of audio, so a small archive can still be a
+   memory problem and a 14 MB archive of 4:3 sprites is perfectly fine. The `sff MB` +
+   `snd MB` columns decide, with the archive size as a first filter only.
+
