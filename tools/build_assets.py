@@ -76,13 +76,45 @@ def exact_case(folder, name):
 KEEP = object()  # roster entry has no "localcoord": leave the character's own value alone
 
 
+CLS_LINE = re.compile(rb"(?m)^[^\x00-\x7f]*&cls[ \t]*\r?\n")
+
+
+def strip_cls_padding(folder):
+    """Remove lines that are only '<non-ASCII bytes>&cls' from a character's script files.
+
+    Some AK1 downloads (vegito) pad every .def/.cns/.cmd with ~80,000 of them, apparently to hide the real
+    text from editors. They mean nothing to MUGEN, but Dolmexica parses every line: ~8 MB of padding stalled
+    the select screen on the Vita. Returns the number of lines removed."""
+    n = 0
+    for dp, _, fs in os.walk(folder):
+        for f in fs:
+            if os.path.splitext(f)[1].lower() not in (".def", ".cns", ".cmd", ".st", ".air", ".dat"):
+                continue
+            path = os.path.join(dp, f)
+            data = open(path, "rb").read()
+            if b"&cls" not in data:
+                continue
+            new, k = CLS_LINE.subn(b"", data)
+            if k:
+                open(path, "wb").write(new)
+                n += k
+    return n
+
+
 def patch_char_def(def_path, localcoord, overrides=None):
     folder = os.path.dirname(def_path)
     text = read(def_path)
     overrides = {k.lower(): v for k, v in (overrides or {}).items()}
     out, section, changes = [], "", []
+    junk = 0
     for line in text.replace("\r\n", "\n").split("\n"):
         s = line.strip()
+        if not section and s and not s.startswith((";", "[")) and "=" not in s:
+            # filler before the first section that is neither a comment nor a key (e.g. vegito's 80,000
+            # "<BOM>&cls" lines that hide the real text from editors): the engine parses every line, and on
+            # the Vita that stalled the select screen, so drop it
+            junk += 1
+            continue
         m = re.match(r"\[([^\]]+)\]", s)
         if m:
             section = m.group(1).strip().lower()
@@ -107,6 +139,8 @@ def patch_char_def(def_path, localcoord, overrides=None):
                 changes.append(f"{kv.group(2)}: {v} -> {fixed}")
         out.append(line)
     write(def_path, "\n".join(out))
+    if junk:
+        changes.append(f"dropped {junk} junk lines before [Info]")
     return changes
 
 
@@ -181,6 +215,16 @@ def main():
                         dropped += 1
             def_path = os.path.join(dst, c["def"])
             changes = patch_char_def(def_path, c["localcoord"] if "localcoord" in c else KEEP, c.get("def_overrides"))
+            padding = strip_cls_padding(os.path.dirname(def_path))
+            if padding:
+                changes.append(f"stripped {padding} '&cls' padding lines from scripts")
+            if c.get("sprite_cap"):
+                # read by the Vita engine (tools/engine/patches/0002): this fighter's sprites above N px
+                # are stored downscaled; other fighters keep the engine default (512)
+                d = read(def_path)
+                d = re.sub(r"(?im)^(\s*\[info\][^\n]*\n)", lambda m: f"{m.group(1)}jfv.spritecap = {int(c['sprite_cap'])}\n", d, count=1)
+                write(def_path, d)
+                changes.append(f"jfv.spritecap {c['sprite_cap']}")
             snd = re.search(r"(?im)^\s*sound\s*=\s*([^;\r\n]+)", read(def_path))
             if snd and not no_shrink:
                 sp = os.path.join(dst, snd.group(1).strip())
@@ -250,7 +294,21 @@ def main():
         body = sel.group(1)
         for k, v in grid.items():
             body = re.sub(rf"(?im)^(\s*{re.escape(k)}\s*=\s*)[^;\n]*", lambda m, v=v: f"{m.group(1)}{v}", body)
-        write(sysdef, t[:sel.start(1)] + body + t[sel.end(1):])
+        t = t[:sel.start(1)] + body + t[sel.end(1):]
+        if top < 170:
+            # [SelectBG 1] "Dark box" (a 320x62 trans=sub strip, tiled sideways) shades the stock 2-row grid at
+            # y=166 inside window x 85-235. Re-fit it to the bigger grid: start at the grid's top, tile down too,
+            # and clip it to the grid's outline -- otherwise it shows as a stray dark rectangle over the cells.
+            x0 = (320 - cols * 29) // 2
+            box = {"start": f"0, {top - 2}", "tile": "1,1",
+                   "window": f"{x0 - 2},{top - 2}, {x0 + cols * 29},{top + rows * 29}"}
+            bg = re.search(r"(?is)\[SelectBG 1\][^\n]*\n(.*?)(?=\n\[)", t)
+            if bg:
+                body = bg.group(1)
+                for k, v in box.items():
+                    body = re.sub(rf"(?im)^(\s*{re.escape(k)}\s*=\s*)[^;\n]*", lambda m, v=v: f"{m.group(1)}{v}", body)
+                t = t[:bg.start(1)] + body + t[bg.end(1):]
+        write(sysdef, t)
         log(f"6. stock select grid -> {rows}x{cols} for {slots} slots")
 
     if cfg.get("motif") == "tbm":

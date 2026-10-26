@@ -99,28 +99,39 @@ index ea26c6a..4c65833 100644
  		texture->mTexture->palette_UID = 0;
  		texture->mTexture->depth_UID = 0; // not zeroed by default in vita2d apparently
 diff --git a/repo/playerdefinition.cpp b/repo/playerdefinition.cpp
-index 33fa89c..ceda8c9 100644
+index 33fa89c..99514fa 100644
 --- a/repo/playerdefinition.cpp
 +++ b/repo/playerdefinition.cpp
-@@ -18,6 +18,12 @@
+@@ -18,6 +18,15 @@
  #include <prism/input.h>
  #include <prism/soundeffect.h>
  #include <prism/collisionhandler.h>
 +#include <prism/texture.h>
 +
-+// [JFV] fighter sprites wider/taller than this are stored downscaled on Vita (patch 0002)
++// [JFV] fighter sprites wider/taller than this are stored downscaled on Vita (patch 0002).
++// A character can lower (or raise) it for itself with `jfv.spritecap = N` in its .def [Info];
++// tools/build_assets.py writes that from roster.json "sprite_cap".
 +#ifndef JFV_FIGHTER_MAX_SPRITE_DIMENSION
 +#define JFV_FIGHTER_MAX_SPRITE_DIMENSION 512
 +#endif
++static int gJfvFighterSpriteCap[2] = { JFV_FIGHTER_MAX_SPRITE_DIMENSION, JFV_FIGHTER_MAX_SPRITE_DIMENSION };
  
  #include "mugencommandreader.h"
  #include "mugenstatereader.h"
-@@ -498,7 +504,13 @@ void loadPlayers(MemoryStack* tMemoryStack) {
+@@ -151,6 +160,7 @@ static int parsePlayerPreferredPalette(int tPalette, MugenDefScript* tScript) {
+ }
+ 
+ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* tScript) {
++	gJfvFighterSpriteCap[tPlayer->mRootID & 1] = getMugenDefIntegerOrDefault(tScript, "info", "jfv.spritecap", JFV_FIGHTER_MAX_SPRITE_DIMENSION);
+ 	char file[200];
+ 	char path[1024];
+ 	char scriptPath[1024];
+@@ -498,7 +508,13 @@ void loadPlayers(MemoryStack* tMemoryStack) {
  
  static void loadSinglePlayerSprites(DreamPlayer* tPlayer) {
  	setMugenSpriteFileReaderToUsePalette(tPlayer->mRootID);
 +#ifdef VITA
-+	setVitaMaximumTextureDimension(JFV_FIGHTER_MAX_SPRITE_DIMENSION);
++	setVitaMaximumTextureDimension(gJfvFighterSpriteCap[tPlayer->mRootID & 1]);
 +#endif
  	tPlayer->mHeader->mFiles.mSprites = loadMugenSpriteFile(tPlayer->mHeader->mFiles.mSpritePath, tPlayer->mHeader->mFiles.mHasPalettePath, tPlayer->mHeader->mFiles.mPalettePath);
 +#ifdef VITA

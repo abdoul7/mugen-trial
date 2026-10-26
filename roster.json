@@ -253,6 +253,95 @@
         "source": "stock",
         "def": "stages/kof96goe.def"
       }
+    },
+    {
+      "id": "gohan_teen_jus_k",
+      "root": "source/jf",
+      "folder": "gohan_teen_jus_k/Gohan_Teen_JUS_K",
+      "def": "Gohan_Teen_JUS_K.def",
+      "source_note": "AK1 download (Gohan_Teen_JUS_K.rar); was rejected on sprite-file size (35.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 43 MB of textures per fighter.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/sfa3akuma.def"
+      }
+    },
+    {
+      "id": "hiruzen",
+      "root": "source/jf",
+      "folder": "hiruzen/Hiruzen",
+      "def": "Hiruzen.def",
+      "source_note": "AK1 download (Hiruzen.rar); was rejected on sprite-file size (43.7 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 65 MB of textures per fighter.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kof96goe.def"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "kawashiki",
+      "root": "source/jf",
+      "folder": "kawashiki/Kawashiki/Kawashiki",
+      "def": "Kawashiki.def",
+      "source_note": "AK1 download (Kawashiki.rar); was rejected on sprite-file size (33.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 74 MB of textures per fighter.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/rschool.def"
+      }
+    },
+    {
+      "id": "otsutsuki_kaguya",
+      "root": "source/jf",
+      "folder": "otsutsuki_kaguya_v1_0/Otsutsuki_Kaguya",
+      "def": "Otsutsuki_Kaguya.def",
+      "source_note": "AK1 download (Otsutsuki_Kaguya v1.0.rar); was rejected on sprite-file size (53.0 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 60 MB of textures per fighter with its own sprite cap 256.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/ship.def"
+      },
+      "sprite_cap": 256,
+      "snd_rate": 16000
+    },
+    {
+      "id": "androide_c_18",
+      "root": "source/jf",
+      "folder": "androide_c_18/Androide-C-18",
+      "def": "Androide-C-18.def",
+      "source_note": "AK1 download (Androide-C-18.zip); was rejected on sprite-file size (113.6 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/snorlax.def"
+      },
+      "sprite_cap": 256,
+      "snd_rate": 16000
+    },
+    {
+      "id": "vegito",
+      "root": "source/jf",
+      "folder": "vegito/Vegito",
+      "def": "Vegito.def",
+      "source_note": "AK1 download (Vegito.rar); was rejected on sprite-file size (69.1 MB + stcommon common1.dll). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256. Its .def loads stcommon = common1.dll (a disguised common file; .dll is never extracted), so stcommon points at the engine's common1.cns instead.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kfm.def"
+      },
+      "sprite_cap": 256,
+      "snd_rate": 16000,
+      "def_overrides": {
+        "stcommon": "common1.cns"
+      }
+    },
+    {
+      "id": "ichibe_hyosube",
+      "root": "source/jf",
+      "folder": "ichibe_hyosube_v2_by_dontuatua/Ichibe Hyosube V2",
+      "def": "Ichibe Hyosube V2.def",
+      "source_note": "AK1 download (Ichibe_Hyosube_V2_by_DonTuatua.rar); was rejected on sprite-file size (162.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 110 MB of textures per fighter with its own sprite cap 256.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/sfa3akuma.def"
+      },
+      "sprite_cap": 256,
+      "snd_rate": 16000
     }
   ],
   "snd_rate": 22050,
