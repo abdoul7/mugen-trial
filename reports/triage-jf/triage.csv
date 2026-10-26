@@ -1,0 +1,2 @@
+name,folder,mugenversion,localcoord,sff_mb,media_mb,score,verdict,flags,def_path
+"""Goku""",Songoku (SSJ2),1.1,default 320x240,70.5,123.6,31,UNLIKELY,sprite file too big (70 MB); heavy audio (53 MB); team/tag code present; subtractive blend,C:/Users/abdou/AppData/Local/Root/jumpforce-vita/source/jf\goku-ssj2\Songoku (SSJ2)\Songoku (SSJ2).def

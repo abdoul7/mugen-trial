@@ -1,0 +1,17 @@
+label,result,seconds,peak_mb,shots
+kfm,OK,45,168,4
+kfm720,OK,75,212,6
+pupa,OK,75,251,6
+bender,OK,75,433,6
+lucario,OK,75,361,6
+goenitz,OK,75,340,6
+gouken,OK,75,646,6
+janemba,OK,75,317,6
+kaede,OK,75,281,6
+kfm720,OK,60,213,5
+pupa,OK,60,243,5
+bender,OK,60,372,5
+lucario,OK,60,342,5
+goenitz,OK,60,321,5
+gouken,OK,60,638,5
+janemba,OK,60,307,5

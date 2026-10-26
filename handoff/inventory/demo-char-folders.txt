@@ -1,0 +1,2 @@
+# demo character .def files, as chars/<Franchise>/<Char>/<name>.def
+

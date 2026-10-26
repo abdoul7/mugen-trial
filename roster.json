@@ -1,0 +1,138 @@
+{
+  "_comment": "Roster for the build. tools/build_assets.py reads this. localcoord null = remove the TBM 450,370 scaling hack (chars are 320x240-era).",
+  "demo_root": "source/demo/TBM_Last_Beta(Screenpack)",
+  "ogg_quality": 3,
+  "randomselect": true,
+  "arcade_maxmatches": "6,1,1,0,0,0,0,0,0,0",
+  "characters": [
+    {
+      "id": "kfm",
+      "source": "stock",
+      "def": "kfm",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kfm.def"
+      }
+    },
+    {
+      "id": "kfm720",
+      "folder": "Original/kfm720",
+      "def": "kfm720.def",
+      "localcoord": "1280,720",
+      "stage": {
+        "id": "kfm720",
+        "def": "Original/kfm.def",
+        "music": "Sound/Original/kfm.mp3"
+      }
+    },
+    {
+      "id": "pupa",
+      "folder": "Rage of The Dragons/Pupa",
+      "def": "Pupa.def",
+      "localcoord": null,
+      "stage": {
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+      }
+    },
+    {
+      "id": "bender",
+      "folder": "Cartoon/bender",
+      "def": "bender.def",
+      "localcoord": null,
+      "stage": {
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+      },
+      "snd_rate": 16000
+    },
+    {
+      "id": "lucario",
+      "folder": "Pokemon/Lucario_M",
+      "def": "Lucario_M.def",
+      "localcoord": null,
+      "stage": {
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
+      },
+      "copy_files": [
+        [
+          "Data/common2.cns",
+          "common2.cns"
+        ]
+      ]
+    },
+    {
+      "id": "goenitz",
+      "folder": "KOF/Goenitz",
+      "def": "Goenitz.def",
+      "localcoord": null,
+      "stage": {
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
+      }
+    },
+    {
+      "id": "gouken",
+      "folder": "Street Fighter/gouken",
+      "def": "gouken.def",
+      "localcoord": null,
+      "stage": {
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
+      }
+    },
+    {
+      "id": "janemba",
+      "folder": "Dragonball/janemba",
+      "def": "janemba.def",
+      "localcoord": null,
+      "stage": {
+        "id": "janshell",
+        "def": "Dragonball/janembashell.def",
+        "music": "Sound/Dragonball/Dragon Ball Z BGM - M2017 Janemba Reincarnates.mp3"
+      },
+      "def_overrides": {
+        "ending.storyboard": ""
+      },
+      "drop_files": [
+        "final"
+      ]
+    }
+  ],
+  "snd_rate": 22050,
+  "removed": [
+    {
+      "id": "kaede",
+      "reason": "user asked to drop Kaede (2026-10-27)",
+      "entry": {
+        "id": "kaede",
+        "folder": "The Last Blade/Kaede",
+        "def": "Kaede.def",
+        "localcoord": null,
+        "drop_files": [
+          "kaede2.def",
+          "kaede_intro.def",
+          "kaede.air",
+          "kaede.cmd",
+          "kaede.cns",
+          "kaede.sff",
+          "kaede.snd",
+          "kaede_common.cns",
+          "kaede[0-9][0-9].act",
+          "Kaede[0-9].act"
+        ],
+        "stage": {
+          "id": "kaedestg",
+          "def": "TheLastBlade/KaedeStage-dm.def",
+          "music": "Sound/TheLastBlade/KaedeStage-dm.mp3"
+        }
+      }
+    }
+  ]
+}

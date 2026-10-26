@@ -1,0 +1,60 @@
+Source: github.com/CaptainDreamcast/DolmexicaInfinite  vita/CmakeLists.txt (trimmed)
+
+## This file is a quick tutorial on writing CMakeLists for targeting the Vita (adapted from the Vita SDK samples)
+cmake_minimum_required(VERSION 2.8)
+
+## This includes the Vita toolchain, must go before project definition
+# It is a convenience so you do not have to type
+# -DCMAKE_TOOLCHAIN_FILE=$VITASDK/share/vita.toolchain.cmake for cmake. It is
+# highly recommended that you include this block for all projects.
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  if(DEFINED ENV{VITASDK})
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
+  else()
+    message(FATAL_ERROR "Please define VITASDK to point to your SDK path!")
+  endif()
+endif()
+
+## Define project parameters here
+# Name of the project
+project(DolmexicaInfinite)
+# This line adds Vita helper macros, must go after project definition in order
+# to build Vita specific artifacts (self/vpk).
+include("${VITASDK}/share/vita.cmake" REQUIRED)
+
+## Configuration options for this app
+# Display name (under bubble in LiveArea)
+set(VITA_APP_NAME "Dolmexica Infinite")
+# Unique ID must be exactly 9 characters. Recommended: XXXXYYYYY where X =
+# unique string of developer and Y = a unique number for this app
+set(VITA_TITLEID  "DOLM00001")
+# Optional version string to show in LiveArea's more info screen
+set(VITA_VERSION  "01.08")
+
+## Flags and includes for building
+# Note that we make sure not to overwrite previous flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVITA -std=c++17 -Wl,-q -O2 -g -mtune=cortex-a9 -mfpu=neon -ftree-vectorize")
+# Optional. You can specify more param.sfo flags this way.
+set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1")
+
+# Add any additional include paths here
+include_directories(
+  prism
+  vita2d
+  mikmod
+  vorbisfile
+  vorbis
+  vorbisenc
+  ogg
+  vorbisidec
+  png
+  jpeg
+  webp
+  FLAC
+  zstd
+  drakonsound
+vita_create_self(${PROJECT_NAME}.self ${PROJECT_NAME})
+vita_create_vpk(${PROJECT_NAME}.vpk ${VITA_TITLEID} ${PROJECT_NAME}.self
+  FILE ../assets assets
+  FILE ../debug debug

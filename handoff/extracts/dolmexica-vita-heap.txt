@@ -1,0 +1,19 @@
+Source: github.com/CaptainDreamcast/DolmexicaInfinite  main.cpp (lines 28-43, as of clone 2026-10-26)
+This is the compiled memory ceiling for the Vita build.
+
+int romdisk_buffer_length;
+
+// #define DEVELOP
+
+#ifdef DREAMCAST
+KOS_INIT_FLAGS(INIT_DEFAULT | INIT_MALLOCSTATS);
+
+#endif
+
+#ifdef VITA
+// VitaSDK defaults the newlib heap to 32MB, not enough for large sprites like in stages (or Dream Fight story credits etc). 96MB seems to work, even with fragmentation.
+extern "C" {
+	unsigned int _newlib_heap_size_user = 96 * 1024 * 1024;
+}
+#endif
+

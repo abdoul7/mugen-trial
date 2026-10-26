@@ -1,0 +1,41 @@
+# This repo is PUBLIC. Only our own code, docs and roster config go in.
+# Third-party content (engine binaries, TBM screenpack, characters, stages, music) is
+# rebuilt locally with tools/fetch_sources.py and must never be committed.
+
+# downloaded archives and their extracted contents
+downloads/
+source/
+engine/
+
+# generated
+build/
+dist/
+.venv/
+__pycache__/
+*.pyc
+
+# reports: keep text, drop screenshots (they show third-party game art)
+reports/**/*.png
+reports/**/*.jpg
+reports/triage-*/select.def
+
+# third-party excerpt (TBM's own system.def text)
+handoff/extracts/tbm-system.def-head.txt
+
+# any archive or game asset that wanders into the tree
+*.7z
+*.rar
+*.zip
+*.vpk
+*.sff
+*.snd
+*.mp3
+*.ogg
+*.act
+*.air
+*.cns
+*.cmd
+*.fnt
+*.self
+*.exe
+*.dll

@@ -1,0 +1,14 @@
+# Large local files referenced by this handoff but NOT included in the folder
+
+718.5 MB  C:\Users\issaa\Creations\projects\mugen-vita-triage\downloads\TBM_demo.7z
+96.5 MB  C:\Users\issaa\Creations\projects\mugen-vita-triage\downloads\TBM_screenpack.rar
+~719 MB   C:\Users\issaa\Creations\projects\mugen-vita-triage\downloads\extract_demo\TBM_Last_Beta(Screenpack)  (extracted demo: 10 chars, 11 stages)
+~115 MB   C:\Users\issaa\Creations\projects\mugen-vita-triage\downloads\extract_screenpack\TBM 1.1 2020  (extracted screenpack)
+
+Source URLs:
+  demo 7z      https://www.mediafire.com/file/gvbx2eevvk5ahgj/TBM_Last_Beta(Screenpack).7z/file
+  screenpack   https://www.mediafire.com/file/2xz0qqzq4h31zfx/TBM_1.1_2020.rar/file
+  TBIG (Ikemen GO 0.96.3 screenpack, 492 MB) https://www.mediafire.com/file/lrf54bzu2fh5ave/The_Best_Ikemen_GO_Win_x64_0.96.3.rar/file
+
+Dolmexica Infinite 1.8 engine download: https://captaindreamcast.itch.io/dolmexica-infinite
+Full TBM 1.1 pack (47.2 GB, do NOT download for this project): https://mugenfreeforall.com/topic/38810-the-best-mugen-11-beta-2-2020/

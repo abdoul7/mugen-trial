@@ -1,0 +1,188 @@
+path,bytes,mb,role
+Data/00/Intro.sff,35776804,34.12,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/Fight.sff,19168336,18.28,HUD art (lifebars/powerbars/combo)
+Data/00/GameOver.sff,8473872,8.08,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/FightFX.sff,7400977,7.06,hit spark / effect sprites
+Data/00/Title.sff,6676937,6.37,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/00/Versus.sff,4084619,3.9,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Sound/Default.mp3,3492513,3.33,BGM (mp3 -> must be OGG on Vita)
+Stages/Default.sff,3432546,3.27,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+OpenGL32.dll,2307072,2.2,PC runtime (not portable)
+Data/00/Select.mp3,2290778,2.18,BGM (mp3 -> must be OGG on Vita)
+Data/00/Title.mp3,2191024,2.09,BGM (mp3 -> must be OGG on Vita)
+Data/Common.snd,1960598,1.87,
+ReShade64.dll,1513472,1.44,PC runtime (not portable)
+Data/00/Select.sff,1389764,1.33,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+TBM.exe,1364480,1.3,PC runtime (not portable)
+ReShade32.dll,1344000,1.28,PC runtime (not portable)
+Sound/Original/kfm.mp3,1275264,1.22,BGM (mp3 -> must be OGG on Vita)
+Data/00/Intro.mp3,892144,0.85,BGM (mp3 -> must be OGG on Vita)
+Data/00/Victory.mp3,869828,0.83,BGM (mp3 -> must be OGG on Vita)
+Data/00/Victory.sff,828549,0.79,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Microsoft.VC90.CRT/msvcr90.dll,655872,0.63,PC runtime (not portable)
+Plugins/in_vgmstream.dll,536064,0.51,PC runtime (not portable)
+Font/Victory.sff,522731,0.5,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/Fight.snd,511870,0.49,HUD sounds
+Plugins/in_!mpg123.dll,456192,0.44,PC runtime (not portable)
+Data/00/Versus.mp3,455849,0.43,BGM (mp3 -> must be OGG on Vita)
+Data/00/GameOver.mp3,388175,0.37,BGM (mp3 -> must be OGG on Vita)
+Font/Title2.sff,380286,0.36,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Font/Title.sff,379855,0.36,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/System.sff,330071,0.31,menu/title art
+Data/00/Option.sff,227376,0.22,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Microsoft.VC90.CRT/msvcm90.dll,224768,0.21,PC runtime (not portable)
+Stages/0.ico,206681,0.2,
+Data/0.ico,193300,0.18,
+Microsoft.VC90.CRT/0.ico,191898,0.18,
+Plugins/0.ico,185806,0.18,
+Sound/0.ico,183548,0.18,
+Font/0.ico,180789,0.17,
+Plugins/vorbisplug.dll,166400,0.16,PC runtime (not portable)
+Font/Continue.sff,162538,0.16,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Stages/Original/kfm.sff,156733,0.15,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/00/Logo.mp3,149485,0.14,BGM (mp3 -> must be OGG on Vita)
+Data/Common1.cns,130203,0.12,shared character states (v1)
+Data/System.snd,115302,0.11,menu sounds
+Font/Stages001.sff,110798,0.11,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/Common2.cns,107413,0.1,shared character states (v2)
+Plugins/Reshade-Shaders/Shaders/FXAA.fxh,85880,0.08,
+Data/FightFX.air,81514,0.08,hit spark animation data
+Plugins/Reshade-Shaders/Shaders/CinematicDOF.fx,61567,0.06,
+Plugins/Reshade-Shaders/Shaders/SMAA.fxh,54452,0.05,
+Plugins/Reshade-Shaders/Shaders/DOF.fx,39703,0.04,
+Data/System.def,36702,0.04,"motif layout (title/menus/select grid), localcoord 1280,720"
+Plugins/Reshade-Shaders/Shaders/Depth3D.fx,31199,0.03,
+Font/NPower.sff,27736,0.03,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/00/Logo.sff,27406,0.03,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Plugins/Reshade-Shaders/Shaders/SurfaceBlur.fx,26261,0.03,
+Font/ADAMN.sff,25941,0.02,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Plugins/Reshade-Shaders/Shaders/MXAO.fx,23982,0.02,
+Font/Time.sff,20648,0.02,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Data/Fight.def,19789,0.02,"HUD layout: lifebars, powerbars, face, time, combo"
+Plugins/Reshade-Shaders/Shaders/Clarity.fx,19540,0.02,
+Plugins/Reshade-Shaders/Shaders/Bloom.fx,19131,0.02,
+Font/Stages002.sff,18713,0.02,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Plugins/Reshade-Shaders/Shaders/Nostalgia.fx,18335,0.02,
+Plugins/Reshade-Shaders/Shaders/LevelsPlus.fx,17794,0.02,
+Plugins/Reshade-Shaders/Shaders/MagicBloom.fx,17593,0.02,
+Font/ADAM.otf,17468,0.02,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/AmbientLight.fx,17207,0.02,
+Plugins/Reshade-Shaders/Shaders/Macros.fxh,16537,0.02,
+Plugins/Reshade-Shaders/Shaders/ASCII.fx,16046,0.02,
+Plugins/Reshade-Shaders/Shaders/AdaptiveSharpen.fx,15931,0.02,
+Data/00/Intro.def,15222,0.01,storyboard or font definition
+Readme.txt,13882,0.01,
+Plugins/DefaultPreset.ini,13278,0.01,PC runtime (not portable)
+Plugins/Reshade-Shaders/Shaders/ReShadeUI.fxh,12744,0.01,
+Stages/Original/kfm.def,12191,0.01,storyboard or font definition
+Font/Hashtag.sff,12140,0.01,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Plugins/Reshade-Shaders/Shaders/CRT.fx,10793,0.01,
+Plugins/waveplug.dll,10752,0.01,PC runtime (not portable)
+Plugins/Reshade-Shaders/Shaders/ReflectiveBumpMapping.fx,9618,0.01,
+Plugins/Reshade-Shaders/Shaders/Denoise.fx,9215,0.01,
+Plugins/Reshade-Shaders/Shaders/FineSharp.fx,8905,0.01,
+Plugins/Reshade-Shaders/Shaders/SMAA.fx,8894,0.01,
+Plugins/Reshade-Shaders/Shaders/DrawText.fxh,8843,0.01,
+Data/Select.def,8803,0.01,roster + stage list
+Plugins/Reshade-Shaders/Shaders/LumaSharpen.fx,8712,0.01,
+Data/player.lua,8628,0.01,stock MUGEN 1.1 sample (NOT style driver)
+Plugins/Reshade-Shaders/Shaders/GaussianBlur.fx,8623,0.01,
+Plugins/Reshade-Shaders/Shaders/PerfectPerspective.fx,8241,0.01,
+Plugins/Reshade-Shaders/Shaders/HighPassSharpen.fx,7942,0.01,
+Plugins/Reshade-Shaders/Shaders/LightDoF.fx,7849,0.01,
+Plugins/Reshade-Shaders/Shaders/HSLShift.fx,7203,0.01,
+Plugins/Reshade-Shaders/Shaders/UIMask.fx,7058,0.01,
+Font/jg.fnt,7029,0.01,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/3DFX.fx,6886,0.01,
+Font/f-6x9.sff,6619,0.01,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Plugins/Reshade-Shaders/Shaders/EyeAdaption.fx,6610,0.01,
+Plugins/Reshade-Shaders/Shaders/Curves.fx,6274,0.01,
+Plugins/Reshade-Shaders/Shaders/DisplayDepth.fx,6054,0.01,
+Plugins/Reshade-Shaders/Shaders/FilmicAnamorphSharpen.fx,5663,0.01,
+Font/f-4x6.sff,5631,0.01,"storyboard/screen art (intro, title, versus, victory, gameover, select)"
+Font/combou.fnt,5311,0.01,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/FilmGrain2.fx,5303,0.01,
+Font/time1.fnt,5281,0.01,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/DepthHaze.fx,5218,0.0,
+Plugins/Reshade-Shaders/Shaders/Colourfulness.fx,5055,0.0,
+Font/f-6x9.fnt,5014,0.0,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/Emphasize.fx,4938,0.0,
+Data/mugen.lua,4806,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Stages/Default.def,4666,0.0,storyboard or font definition
+Plugins/Reshade-Shaders/Shaders/AdaptiveFog.fx,4619,0.0,
+Plugins/Reshade-Shaders/Shaders/Deband.fx,4605,0.0,
+Data/test.lua,4342,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Plugins/Reshade-Shaders/Shaders/Splitscreen.fx,4315,0.0,
+Plugins/Reshade-Shaders/Shaders/FakeMotionBlur.fx,4203,0.0,
+Plugins/Reshade-Shaders/Shaders/Glitch.fx,4178,0.0,
+Plugins/Reshade-Shaders/Shaders/UIDetect.fx,4161,0.0,
+Plugins/Reshade-Shaders/Shaders/FilmicPass.fx,4123,0.0,
+Plugins/Reshade-Shaders/Shaders/TiltShift.fx,4039,0.0,
+ReShade.ini,3729,0.0,PC runtime (not portable)
+OpenGL64.dll,3683,0.0,PC runtime (not portable)
+Data/mugen.cfg,3677,0.0,"engine config (resolution, modules)"
+Data/vector.lua,3589,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Plugins/Reshade-Shaders/Shaders/Vignette.fx,3530,0.0,
+Plugins/Reshade-Shaders/Shaders/Prism.fx,3450,0.0,
+Plugins/Reshade-Shaders/Shaders/FilmGrain.fx,3402,0.0,
+Plugins/Reshade-Shaders/Shaders/HQ4X.fx,3368,0.0,
+Plugins/Reshade-Shaders/Shaders/FXAA.fx,3345,0.0,
+Plugins/Reshade-Shaders/Shaders/MultiLUT.fx,3334,0.0,
+Plugins/Reshade-Shaders/Shaders/Chromakey.fx,3226,0.0,
+Plugins/Reshade-Shaders/Shaders/Monochrome.fx,3183,0.0,
+Plugins/Reshade-Shaders/Shaders/StageDepth.fx,3050,0.0,
+Data/indexed.frag,3032,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Font/f-4x6.fnt,2903,0.0,font (bitmap .fnt or outline font)
+Plugins/Reshade-Shaders/Shaders/FakeHDR.fx,2895,0.0,
+Plugins/Reshade-Shaders/Shaders/Levels.fx,2876,0.0,
+Plugins/Reshade-Shaders/Shaders/LUT.fx,2714,0.0,
+Plugins/Reshade-Shaders/Shaders/Daltonize.fx,2556,0.0,
+Plugins/Reshade-Shaders/Shaders/Layer.fx,2540,0.0,
+Data/00/GameOver.def,2422,0.0,storyboard or font definition
+Plugins/Reshade-Shaders/Shaders/Border.fx,2334,0.0,
+Plugins/Reshade-Shaders/Shaders/TriDither.fx,2304,0.0,
+Data/rgba.frag,2270,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Plugins/Reshade-Shaders/Shaders/ReShade.fxh,2235,0.0,
+Plugins/Reshade-Shaders/Shaders/Vibrance.fx,2217,0.0,
+Plugins/Reshade-Shaders/Shaders/Tonemap.fx,2002,0.0,
+Plugins/Reshade-Shaders/Shaders/DPX.fx,1955,0.0,
+Microsoft.VC90.CRT/Microsoft.VC90.CRT.manifest,1857,0.0,
+Plugins/Reshade-Shaders/Shaders/ColorMatrix.fx,1619,0.0,
+Data/fp.lua,1596,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Plugins/Reshade-Shaders/Shaders/Technicolor.fx,1497,0.0,
+Plugins/Reshade-Shaders/Shaders/Cartoon.fx,1383,0.0,
+Plugins/Reshade-Shaders/Shaders/UIDetect.fxh,1372,0.0,
+Plugins/Reshade-Shaders/Shaders/Technicolor2.fx,1364,0.0,
+Plugins/Reshade-Shaders/Shaders/LiftGammaGain.fx,1243,0.0,
+Plugins/Reshade-Shaders/Shaders/ChromaticAberration.fx,1189,0.0,
+Plugins/plugin.ini,1044,0.0,PC runtime (not portable)
+Plugins/Reshade-Shaders/Shaders/NightVision.fx,946,0.0,
+Data/init.lua,724,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Font/Options.def,692,0.0,storyboard or font definition
+Font/Stages001.def,687,0.0,storyboard or font definition
+Font/Stages002.def,687,0.0,storyboard or font definition
+Font/ADAM.def,685,0.0,storyboard or font definition
+Font/ADAM2.def,685,0.0,storyboard or font definition
+Font/Continue.def,685,0.0,storyboard or font definition
+Font/Title2.def,685,0.0,storyboard or font definition
+Font/Victory.def,684,0.0,storyboard or font definition
+Font/ADAM1.def,683,0.0,storyboard or font definition
+Font/Hashtag.def,683,0.0,storyboard or font definition
+Font/Title.def,682,0.0,storyboard or font definition
+Data/maux.lua,671,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Font/NPower.def,671,0.0,storyboard or font definition
+Font/ADAMN.def,669,0.0,storyboard or font definition
+Font/f-4x6.def,668,0.0,storyboard or font definition
+Font/f-6x9.def,668,0.0,storyboard or font definition
+Font/Time.def,667,0.0,storyboard or font definition
+Plugins/Reshade-Shaders/Shaders/Sepia.fx,497,0.0,
+Data/00/Logo.def,352,0.0,storyboard or font definition
+Data/indexed.vert,190,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Data/rgba.vert,190,0.0,stock MUGEN 1.1 sample (NOT style driver)
+Visit Official Web.url,174,0.0,
+Data/desktop.ini,48,0.0,PC runtime (not portable)
+Font/desktop.ini,48,0.0,PC runtime (not portable)
+Microsoft.VC90.CRT/desktop.ini,48,0.0,PC runtime (not portable)
+Plugins/desktop.ini,48,0.0,PC runtime (not portable)
+Sound/desktop.ini,48,0.0,PC runtime (not portable)
+Stages/desktop.ini,48,0.0,PC runtime (not portable)
