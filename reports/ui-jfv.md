@@ -49,6 +49,7 @@ need almost no texture memory on the Vita. The old darkened bar backgrounds were
 - Vita3K, patched engine (`tools/engine/build_vita.sh`), autotest fights Sasuke vs KFM and
   Madara vs Goenitz:
   - HUD, timer badge and countdown, combo, power levels and "SASUKE WINS" all render correctly.
-- **Not yet seen running:** the select screen. Demo mode skips it, and driving it needs key
-  input. It has only been checked as a mock-up composited from the same sprites and
-  coordinates. Also not seen: title and VS on the Vita renderer, and a physical Vita.
+- Windows build, driven with `tools/drive_game.py`: title menu, select screen (cursor moves, 1P tab,
+  name plate, portrait) and VS screen seen in screenshots; fixed menu clipping and the name/cursor overlap.
+- **Not yet seen running:** title, select and VS on the Vita renderer (the Vita3K autotest
+  skips the menus), the 2P side of the select screen, and a physical Vita.

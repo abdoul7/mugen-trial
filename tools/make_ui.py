@@ -398,14 +398,17 @@ def cursor(accent, label, filled):
     t = 3.6 if filled else 2.2
     poly(d, [(0, o), (w, o), (w, h), (0, h)], (*accent, 255))
     poly(d, [(t, o + t), (w - t, o + t), (w - t, h - t), (t, h - t)], (0, 0, 0, 0))
-    poly(d, para(0, 0, 19, o + 0.5, 3), (*accent, 255))
+    poly(d, para(0, 0, 21, o + 0.5, 3), (*accent, 255))
     img = done(c)
     # clear the inside properly (polygon with alpha 0 doesn't erase)
     inner = Image.new("L", img.size, 0)
     ImageDraw.Draw(inner).rectangle([int(t) + 1, o + int(t) + 1, w - int(t) - 2, h - int(t) - 2], fill=255)
     img.paste((0, 0, 0, 0), mask=inner)
-    lab = glyphs.text(label, 6, fill=(8, 10, 20), outline=None, ow=0, stroke=1.3)
-    img.paste(lab, (4, 2), lab)
+    x = 3
+    for ch in label:  # one glyph at a time: at this size the italic "1" runs into the "P"
+        g = glyphs.text(ch, 7, fill=(8, 10, 20), outline=None, ow=0, stroke=1.6)
+        img.paste(g, (x, 1), g)
+        x += g.size[0] + 1
     return img
 
 
@@ -489,8 +492,8 @@ SELECT_BG = (bg("SelectBGdef", bgclearcolor="0,0,0")
              + bg("SelectBG 0", type="normal", spriteno="1100,0", start="-160,0")
              + bg("SelectBG 1", type="normal", spriteno="1103,0", start="-152,20")
              + bg("SelectBG 2", type="normal", spriteno="1104,0", start="20,20")
-             + bg("SelectBG 3", type="normal", spriteno="1105,0", start="-154,134")
-             + bg("SelectBG 4", type="normal", spriteno="1106,0", start="30,134")
+             + bg("SelectBG 3", type="normal", spriteno="1105,0", start="-154,121")
+             + bg("SelectBG 4", type="normal", spriteno="1106,0", start="30,121")
              + bg("SelectBG 5", type="normal", spriteno="1101,0", start="{gx},{gy}")
              + bg("SelectBG 6", type="normal", spriteno="1102,0", start="-160,0"))
 VS_BG = (bg("VersusBGdef", bgclearcolor="0,0,0")
@@ -508,12 +511,13 @@ SYSTEM_KEYS = {
     "files": {"font1": "font/jfv_s.fnt", "font2": "font/jfv_m.fnt", "font3": "font/jfv_m.fnt", "font4": "font/jfv_mhi.fnt",
               "font5": "font/jfv_l.fnt"},
     "title info": {"menu.pos": "160,154", "menu.item.font": "3,0,0", "menu.item.active.font": "4,0,0",
-                   "menu.item.spacing": "0,14", "menu.boxcursor.coords": "-62,-11,61,2",
-                   "menu.window.margins.y": "11,-3", "menu.window.visibleitems": "5"},
-    "select info": {"title.offset": "160,13", "title.font": "4,0,0",
+                   "menu.item.spacing": "0,14", "menu.boxcursor.coords": "-62,-13,61,1",
+                   "menu.window.margins.y": "14,-3", "menu.window.visibleitems": "5"},
+    "select info": {"title.offset": "160,15", "title.font": "4,0,0",
                     "p1.face.offset": "20,22", "p2.face.offset": "299,22",
-                    "p1.name.offset": "16,144", "p1.name.font": "3,0,1",
-                    "p2.name.offset": "304,144", "p2.name.font": "3,0,-1",
+                    "p1.face.scale": "0.75,0.75", "p2.face.scale": "0.75,0.75",
+                    "p1.name.offset": "16,131", "p1.name.font": "3,0,1",
+                    "p2.name.offset": "304,131", "p2.name.font": "3,0,-1",
                     "stage.pos": "160,40", "stage.active.font": "4,0,0", "stage.active2.font": "3,0,0",
                     "stage.done.font": "4,0,0"},
     "vs screen": {"p1.pos": "20,31", "p2.pos": "299,31", "p1.name.pos": "80,192", "p1.name.font": "1,0,0",
