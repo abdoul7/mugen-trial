@@ -639,6 +639,40 @@
           "stcommon": "common1.cns"
         }
       }
+    },
+    {
+      "id": "broly",
+      "reason": "Vita3K: emulator crashes while loading his scripts, right after States/Supers.st (heap 3.5 MB, so not memory): probably script syntax Dolmexica cannot handle. Bisect his 21 script files.",
+      "entry": {
+        "id": "broly",
+        "root": "source/jf",
+        "folder": "broly_mugen11_by_mr_ansatsuken_19_12_2019/Broly-Mugen11",
+        "def": "Broly-Mugen11.def",
+        "source_note": "AK1 download (Broly-Mugen11 by Mr Ansatsuken (19-12-2019).rar), batch 2 (Issa). Ambitious: sprites over 4096 px (engine limit) -- relies on sprite_cap 256 storing them downscaled; scripts large.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kfm.def"
+        },
+        "sprite_cap": 256,
+        "snd_rate": 16000
+      }
+    },
+    {
+      "id": "goku_ui",
+      "reason": "Vita3K: Out of main memory loading Goku.sff (heap only 31 of 128 MB used): sprites over 4096 px are decoded full-size before the sprite cap shrinks them. Needs an engine change that downscales while decoding.",
+      "entry": {
+        "id": "goku_ui",
+        "root": "source/jf",
+        "folder": "dbfz_goku_ui_v2/DBFZ Goku UI",
+        "def": "DBFZ Goku UI.def",
+        "source_note": "AK1 download (DBFZ Goku UI v2.rar), batch 2 (Issa). Ambitious: sprites over 4096 px (engine limit) -- relies on sprite_cap 256 storing them downscaled; scripts large.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/rschool.def"
+        },
+        "sprite_cap": 256,
+        "snd_rate": 16000
+      }
     }
   ]
 }
