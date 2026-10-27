@@ -68,3 +68,38 @@ but run visibly slow there, and the Vita heap is 96 MB total.
 
 See `TODO.md`. Sourcing log: `reports/jf-sourcing.md`. Sourcing-agent prompt:
 `docs/hermes-sourcing-prompt.md`.
+
+## UI handoff — 2026-10-27 (unfinished; read before UI work)
+
+Read `handoff/UI.md` for the current checkout, assets, bugs and verification limits.
+Read `docs/ui-claude-prompt.md` for the owner's latest menu redesign request and
+researched implementation brief. Continue branch `motif/ui-overhaul`; keep it a
+reviewable PR, and do not describe the current experiment as an approved design.
+
+The owner wants modern fighting-game menu motion and polish **within the game's
+own nostalgic arcade sprite art style**. This applies to characters, stages,
+effects and UI together. Their reference is detailed hand-pixelled arcade art,
+not a literal low-detail NES/5x7 treatment. Earlier AI concept boards were
+rejected: generic browser-game UI, unrelated city skyline, Goku-like mascot,
+and inconsistent illustration styles. `Jump Rift` was only an unapproved working
+name; the latest screenshot still uses `Jump Force Vita`. Retain current branding
+unless the owner approves a replacement.
+
+Latest explicit requirement: remove the whole hardcoded bottom engine footer,
+including the blue bar, Dolmexica text and date/presenter text. This needs a
+native source change; see `titlescreen.cpp` around lines 345-352. Do not conceal
+it with artwork. Preserve license/engine attribution in credits/documentation.
+
+Current experimental tools: `tools/arcade_motif.py`, `tools/verify_arcade.py`,
+`tools/normalize_portraits.py`. The portrait normalizer is **not wired into the
+motif builder and has not been validated**. Known native bugs: high-resolution
+portraits overflow select cells; `title.font = -1` draws the engine fallback
+instead of hiding the mode heading. Fix and verify these before adding effects.
+
+The old `build/arcade-preview` contains only 8 demo/stock fighters + randomselect;
+it is not the full roster. The owner's AK1 archives are at
+`C:\Users\abdou\Downloads\ak1 jump force characters handoff`. All 14 roster archive
+SHA-256s were checked against `reports/jf-archives.csv`, extracted into ignored
+`source/jf/`, and `build/game` now contains all 22 character directories and the
+23-entry select list. The new UI has **not** been verified on that full build.
+Do not edit `roster.json` from this lane. Do not commit game assets or screenshots.
