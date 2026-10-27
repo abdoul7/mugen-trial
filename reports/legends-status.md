@@ -12,12 +12,12 @@ testing are the owner's.
 | Part | Where | State |
 |---|---|---|
 | Rules: catalog, seeded draws, hand, Hype, tickets, card states, modifiers, relay, CPU coach | `tools/legends/engine/legendscore.cpp` | done, unit-tested (no engine dependency) |
-| Unit tests | `tools/legends/tests/test_legendscore.cpp`, `run.sh` | 94 checks pass, also under ASan + UBSan |
+| Unit tests | `tools/legends/tests/test_legendscore.cpp`, `run.sh` | 301 checks pass, also under ASan + UBSan |
 | Engine mode: squad select, opening deal, relay, results, rematch | `tools/legends/engine/legendsmode.cpp` | done |
 | In-fight HUD: 3-card dock, Hype rail, tickets, armed/cooldown state, inspect, banners, squad pips, Awakening timer, bout clock | same | done (layout validated on one stage only, see below) |
 | Engine hooks | `tools/engine/patches/0010-legends-mode-hooks.patch` | `GAME_MODE_LEGENDS`, menu item, fight actor, AI coaching, damage scale, autotest |
 | Data | `tools/legends/catalog.json`, `adapters.json` -> `data/legends/*.txt` | 12 cards, 7 enabled; 2 verified adapters |
-| HUD sprites | `tools/legends/legends_art.py` -> `data/legends/legends.sff` | 31 sprites, about 107 KB on disk; frames, icons and pips only, no card illustrations |
+| HUD sprites | `tools/legends/legends_art.py` -> `data/legends/legends.sff` | 127 sprites, about 448 KB on disk with the local kit; faces, thumbnails, frames and animated VFX |
 | Hands-off test | `tools/legends/vita3k_legends_autotest.py` + `legends_autotest.txt` | runs a CPU-coach vs CPU-coach encounter to the results |
 
 Build: `python tools/make_ui.py` (writes the motif and `data/legends`), then
@@ -67,7 +67,7 @@ With no Legendary enabled, the Legendary bucket is empty and draws renormalise t
 
 ## Verified
 
-- **Unit tests:** 98 checks pass (also under ASan + UBSan).
+- **Unit tests:** 301 checks pass (also under ASan + UBSan).
 - **Vita3K, patched engine (all 10 patches), hands-off autotest:** full 3-bout encounters ran to
   the results screen.
   - 3 bouts in 217 s; another encounter of 5 bouts.
@@ -75,22 +75,26 @@ With no Legendary enabled, the Legendary bucket is empty and draws renormalise t
     (12% of 1500), PLUS ULTRA absorbed exactly 2 hits, Pot of Greed delivered 2 bonus tickets,
     echoes hit, were blocked and were interrupted.
 - **Vita3K, menu route:** title, LEGENDS, three picks, opening deal.
-- **Resolve telemetry:** Kung Fu Man with My Ninja Way: 66 of 139 moves tagged, 49% of the bout
-  close, average distance 50. The comparison run without the Resolve is **not valid yet**: the CPU
-  coach played My Ninja Way from its hand mid-fight. Next step: a ban option so the B run
-  excludes the card.
+- **Resolve comparison rerun:** seed 777, Kung Fu Man vs Gouken in bout 1. With My Ninja Way:
+  61/115 commands tagged, 28% close, average distance 54. With `--ban-p1 my_ninja_way`:
+  0/103 tagged, 21% close, average distance 59. Both encounters completed four bouts.
+  The control log has no player-coach draw, attach or commit of the banned card.
+  Native fighter RNG is not seeded by this harness; these are observations, not balance proof.
+- **Renderer continuation:** kit hand tiles/faces and animated effects are wired in. Actual
+  opening/inspect captures were reviewed and text collisions fixed. Details and commands:
+  `reports/legends-renderer.md`.
 
 ## Not done / not verified
 
-- On a physical Vita: frame rate, texture memory, legibility. HUD sprites total about 0.3 MB
-  decoded at 8 bits (estimate), well under the 4 MiB budget.
+- On a physical Vita: frame rate, texture memory, legibility. The kit alone decodes to 1.01 MiB at 8 bits (about 4.04 MiB at 32 bits), plus
+  placeholders/palettes/engine overhead. Hardware texture allocation remains unmeasured.
 - **Art kit (Codex v0.1):**
   - Done: `tools/legends/legends_kit.py` converts the kit's three runtime atlases (kept locally in
     ignored `source/legends-art/kit/`) into `legends.sff` plus `legends.air`. That is 1.01 MiB
     decoded at 8 bits, about 4 MiB at 32-bit.
   - Done: the catalog takes its names, rules text, flavor and timings from the kit.
-  - **Not done:** the engine does not draw the kit sprites yet (tiles, card faces, VFX). It still
-    uses the placeholders. The planned layout is in this branch's history notes.
+  - Done: engine rendering for tiles, full faces and animated VFX. Missing-kit installations
+    retain the placeholder fallback. No art binaries are committed.
 - The 5 disabled cards, including ZA WARUDO.
 - Squad order is the pick order: there is no separate reorder step.
 - Hype bonus events: knockdowns only. Reversals and defensive sequences are not detected.

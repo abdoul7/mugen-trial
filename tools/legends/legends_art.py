@@ -167,7 +167,7 @@ def sprites():
     for k in range(3):
         s.append(spr(squad_pip(k), 0, 0, 50, k))
     s.append(spr(panel(160, 28), 0, 0, 60, 0))
-    s.append(spr(panel(110, 98, (255, 236, 150)), 0, 0, 61, 0))
+    s.append(spr(panel(260, 98, (255, 236, 150)), 0, 0, 61, 0))
     return s
 
 

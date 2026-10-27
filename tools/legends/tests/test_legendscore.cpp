@@ -427,6 +427,23 @@ static void testCpuCoach() {
 	CHECK(m.coach[1].cooldown <= gCat.playCooldown);
 }
 
+static void testDrawBan() {
+	printf("per-coach draw ban: opening and repeated ticket draws\n");
+	Match m(&gCat, 1234);
+	squads(m);
+	m.coach[0].bannedCards = {"my_ninja_way"};
+	m.dealOpening(0);
+	CHECK(!m.coach[0].holds("my_ninja_way"));
+	for (int i = 0; i < 200; ++i) {
+		for (auto& h : m.coach[0].hand) h = CardInstance();
+		const auto* d = m.drawCard(0, false, nullptr, "ban regression");
+		CHECK(d && d->id != "my_ninja_way");
+	}
+	Family resolve = Family::Resolve;
+	CHECK(m.eligible(0, false, &resolve).empty());
+	CHECK(!m.eligible(1, false, &resolve).empty()); // opponent is unaffected
+}
+
 static void testAdapters() {
 	printf("adapters\n");
 	std::vector<Adapter> a;
@@ -460,6 +477,7 @@ int main() {
 	testResolve();
 	testCpuCoach();
 	testAdapters();
+	testDrawBan();
 	printf("%d passed, %d failed\n", gPassed, gFailed);
 	return gFailed ? 1 : 0;
 }

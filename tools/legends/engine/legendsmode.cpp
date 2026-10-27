@@ -70,8 +70,17 @@ static struct {
 	int mIsAutotest = 0;
 	int mIsAutotestPending = 0;
 	int mAutotestAttach = 1;
+	int mAutotestInspect = 0, mAutotestSetupTicks = 60;
+	std::vector<std::string> mAutotestBan;
 	size_t mLogFlushed = 0;
 } gLegends;
+
+// Kit sprite IDs are generated from the catalog order, never from the family.
+static int cardArtIndex(const legends::CardDef* d) {
+	for (size_t i = 0; i < gLegends.mCatalog.cards.size(); ++i)
+		if (&gLegends.mCatalog.cards[i] == d) return int(i);
+	return -1;
+}
 
 // ------------------------------------------------------------------ helpers
 static std::string readTextFile(const std::string& tPath) {
@@ -330,6 +339,13 @@ static void drawSquads(float y, int tMarkFocus) {
 
 static void drawCardFace(const legends::CardDef* d, float x, float y) {
 	const int f = int(d->family);
+	const int index = cardArtIndex(d);
+	if (hasMugenSprite(&gScreen.mSprites, 100, index)) {
+		// 128x192 source pixels -> 64x96 in 320-space. Text stays native.
+		addSprite(&gScreen.mSprites, &gScreen.mAnimations, 100, index, x + 6, y, 60);
+		addText(d->shortName, x + 38, y + 104, SYS_FONT_LIST, MUGEN_TEXT_ALIGNMENT_CENTER, WHITE, 63);
+		return;
+	}
 	addSprite(&gScreen.mSprites, &gScreen.mAnimations, SPR_CARD_FACE, f, x, y, 60);
 	addSprite(&gScreen.mSprites, &gScreen.mAnimations, SPR_PIPS, int(d->rarity), x + 52, y + 5, 62);
 	addText(legends::familyName(d->family), x + 5, y + 11, SYS_FONT_LIST, MUGEN_TEXT_ALIGNMENT_LEFT, FAMILY_COLOR[f], 63);
@@ -364,9 +380,12 @@ static void loadLegendsScreen() {
 		}
 		drawSquads(158, 1);
 		gScreen.mFocus = 0;
-		gScreen.mTargetID = addText(" ", 160, 206, SYS_FONT_SMALL, MUGEN_TEXT_ALIGNMENT_CENTER, ORANGE);
-		addText(gScreen.mResolveSlot >= 0 ? "UP/DOWN: WHO GETS THE RESOLVE     CROSS: ATTACH AND FIGHT     CIRCLE: KEEP IT IN HAND" : "CROSS: FIGHT",
-			160, 226, SYS_FONT_RULES, MUGEN_TEXT_ALIGNMENT_CENTER, GREY);
+		gScreen.mTargetID = addText(" ", 160, 206, SYS_FONT_LIST, MUGEN_TEXT_ALIGNMENT_CENTER, ORANGE);
+		if (gScreen.mResolveSlot >= 0) {
+			addText("UP/DOWN: TARGET   CROSS: ATTACH + FIGHT", 160, 217, SYS_FONT_RULES, MUGEN_TEXT_ALIGNMENT_CENTER, GREY);
+			addText("CIRCLE: KEEP IN HAND", 160, 226, SYS_FONT_RULES, MUGEN_TEXT_ALIGNMENT_CENTER, GREY);
+		}
+		else addText("CROSS: FIGHT", 160, 226, SYS_FONT_RULES, MUGEN_TEXT_ALIGNMENT_CENTER, GREY);
 	}
 	else if (gLegends.mScreenMode == LegendsScreenMode::Relay) {
 		addText("BOUT " + std::to_string(m.boutNumber) + " OVER", 296, 33, SYS_FONT_MED, MUGEN_TEXT_ALIGNMENT_RIGHT, ORANGE);
@@ -416,7 +435,7 @@ static void updateLegendsScreen() {
 		return;
 	}
 	auto& m = *gLegends.mMatch;
-	const bool autotest = gLegends.mIsAutotest && gScreen.mNow > 60;
+	const bool autotest = gLegends.mIsAutotest && gScreen.mNow > (gLegends.mScreenMode == LegendsScreenMode::Setup ? gLegends.mAutotestSetupTicks : 60);
 	if (gLegends.mScreenMode == LegendsScreenMode::Setup) {
 		if (gScreen.mResolveSlot >= 0) {
 			if (hasPressedUpFlankSingle(0)) gScreen.mFocus = (gScreen.mFocus + 2) % 3;
@@ -434,6 +453,7 @@ static void updateLegendsScreen() {
 	}
 	else {
 		if (gLegends.mIsAutotest && gScreen.mNow > 120) {
+			m.logf("autotest complete winner %d", m.winner());
 			flushLegendsLog();
 			logg("[LEGENDS] autotest done");
 #ifdef VITA
@@ -478,6 +498,10 @@ int tryStartLegendsAutotest() {
 	}
 	gLegends.mIsAutotest = 1;
 	gLegends.mSeed = 1;
+	gLegends.mAutotestAttach = 1;
+	gLegends.mAutotestInspect = 0;
+	gLegends.mAutotestSetupTicks = 60;
+	gLegends.mAutotestBan.clear();
 	std::array<std::vector<std::string>, 2> sq;
 	size_t a = 0;
 	while (a < text.size()) {
@@ -491,8 +515,10 @@ int tryStartLegendsAutotest() {
 		while (!key.empty() && isspace((unsigned char)key.back())) key.pop_back();
 		while (!key.empty() && isspace((unsigned char)key.front())) key.erase(0, 1);
 		if (key == "seed") gLegends.mSeed = strtoull(val.c_str(), nullptr, 10);
+		else if (key == "inspect") gLegends.mAutotestInspect = atoi(val.c_str());
+		else if (key == "setup.ticks") gLegends.mAutotestSetupTicks = std::max(60, atoi(val.c_str()));
 		else if (key == "attach") gLegends.mAutotestAttach = atoi(val.c_str());
-		else if (key == "p1" || key == "p2") {
+		else if (key == "p1" || key == "p2" || key == "ban.p1") {
 			size_t c = 0;
 			while (c <= val.size()) {
 				size_t d = val.find(',', c);
@@ -500,7 +526,10 @@ int tryStartLegendsAutotest() {
 				std::string item = val.substr(c, d - c);
 				while (!item.empty() && isspace((unsigned char)item.back())) item.pop_back();
 				while (!item.empty() && isspace((unsigned char)item.front())) item.erase(0, 1);
-				if (!item.empty()) sq[key == "p2"].push_back(item);
+				if (!item.empty()) {
+					if (key == "ban.p1") gLegends.mAutotestBan.push_back(item);
+					else sq[key == "p2"].push_back(item);
+				}
 				c = d + 1;
 			}
 		}
@@ -512,6 +541,8 @@ int tryStartLegendsAutotest() {
 	newMatch();
 	for (int s = 0; s < 2; s++)
 		for (int i = 0; i < 3; i++) fillMember(&gLegends.mMatch->squad[s].members[i], sq[s][i]);
+	gLegends.mMatch->coach[0].bannedCards = gLegends.mAutotestBan;
+	for (const auto& id : gLegends.mAutotestBan) gLegends.mMatch->logf("autotest ban side 0: %s", id.c_str());
 	gLegends.mMatch->logf("autotest seed %llu attach %d", (unsigned long long)gLegends.mSeed, gLegends.mAutotestAttach);
 	gLegends.mMatch->dealOpening(0);
 	gLegends.mMatch->dealOpening(1);
@@ -532,6 +563,8 @@ int startPendingLegendsAutotest() {
 // ------------------------------------------------------------------ in-fight actor
 static struct {
 	MugenSpriteFile mSprites;
+	MugenAnimations mAir;
+	std::map<std::pair<int, int>, MugenAnimation*> mSpriteCache;
 	std::vector<MugenAnimation*> mAnimations;
 	int mTick = 0;               // combat ticks this bout (mode clock)
 	int mFrame = 0;
@@ -543,7 +576,8 @@ static struct {
 	int mEndAt = -1;
 	int mStartRound = 1;
 	// HUD
-	std::array<MugenAnimationHandlerElement*, 3> mTiles{}, mIcons{}, mPips{};
+	std::array<MugenAnimationHandlerElement*, 3> mTiles{}, mIcons{}, mPips{}, mThumbs{};
+	std::array<int, 3> mTileGroup{{-1, -1, -1}}, mLastUid{{0, 0, 0}};
 	std::array<int, 3> mTileName{{-1, -1, -1}}, mTileState{{-1, -1, -1}};
 	std::array<const legends::CardDef*, 3> mShown{};
 	MugenAnimationHandlerElement *mFocus = nullptr, *mArmed = nullptr, *mHypeFill = nullptr, *mInspect = nullptr;
@@ -555,10 +589,16 @@ static struct {
 	int mBannerUntil = 0;
 	std::array<int, 2> mAwakeText{{-1, -1}};
 	std::array<std::array<MugenAnimationHandlerElement*, 3>, 2> mSquadPips{};
+	MugenAnimationHandlerElement* mInspectFace = nullptr;
+	const legends::CardDef* mInspectShown = nullptr;
+	std::array<MugenAnimationHandlerElement*, 2> mAuras{}, mHeals{};
+	std::array<int, 2> mHealUntil{{0, 0}}, mAuraKind{{143, 143}};
+	std::array<MugenAnimationHandlerElement*, 3> mDrawSparks{};
+	std::array<int, 3> mDrawUntil{{0, 0, 0}};
 	int mInspectTitle = -1, mInspectBody = -1, mInspectState = -1;
 	int mFocusSlot = 0;
 	int mDiscardHeld = 0;
-	struct Echo { int id; MugenAnimationHandlerElement* e; float x, y; };
+	struct Echo { int id; MugenAnimationHandlerElement* e; float x, y, halfWidth, halfHeight; bool right; };
 	std::vector<Echo> mEchoes;
 	// telemetry: does the Resolve change behaviour? (section 13, step 3)
 	std::array<int, 2> mCloseTicks{{0, 0}}, mCommands{{0, 0}}, mTaggedCommands{{0, 0}};
@@ -572,6 +612,29 @@ static MugenAnimationHandlerElement* fightSprite(int g, int i, float x, float y,
 	return addSprite(&gFight.mSprites, &gFight.mAnimations, g, i, x, y, z);
 }
 
+static MugenAnimation* fightFrame(int g, int i) {
+	auto key = std::make_pair(g, i);
+	auto it = gFight.mSpriteCache.find(key);
+	if (it != gFight.mSpriteCache.end()) return it->second;
+	auto* a = createOneFrameMugenAnimationForSprite(g, i);
+	gFight.mSpriteCache[key] = a;
+	gFight.mAnimations.push_back(a);
+	return a;
+}
+
+static MugenAnimationHandlerElement* fightAction(int action, float x, float y, float z) {
+	if (!hasMugenAnimation(&gFight.mAir, action)) return nullptr;
+	auto* e = addMugenAnimation(getMugenAnimation(&gFight.mAir, action), &gFight.mSprites, Vector3D(x, y, z));
+	setMugenAnimationBaseDrawScale(e, ART_SCALE);
+	return e;
+}
+
+static void restartAction(MugenAnimationHandlerElement* e, int action) {
+	if (!e) return;
+	changeMugenAnimation(e, getMugenAnimation(&gFight.mAir, action));
+	setMugenAnimationVisibility(e, 1);
+}
+
 static int fightText(const std::string& t, float x, float y, int font, MugenTextAlignment a, ColorF c, float z = 75) {
 	return addText(t, x, y, font, a, c, z);
 }
@@ -579,16 +642,23 @@ static int fightText(const std::string& t, float x, float y, int font, MugenText
 static void loadLegendsFight(void*) {
 	gFight = decltype(gFight)();
 	gFight.mSprites = loadMugenSpriteFileWithoutPalette(getDolmexicaAssetFolder() + "data/legends/legends.sff");
+	gFight.mAir = loadMugenAnimationFile(getDolmexicaAssetFolder() + "data/legends/legends.air");
 	gFight.mLastLife = {{getPlayerLife(getRootPlayer(0)), getPlayerLife(getRootPlayer(1))}};
 	gFight.mStartRound = getDreamRoundNumber();
 	for (int i = 0; i < 3; i++) {
 		gFight.mTiles[i] = fightSprite(SPR_EMPTY, 0, DOCK_X[i], DOCK_Y, 70);
 		gFight.mIcons[i] = fightSprite(SPR_ICON, 0, DOCK_X[i] + 6, DOCK_Y + 5, 72);
+		gFight.mThumbs[i] = fightSprite(101, 0, DOCK_X[i] + 2, DOCK_Y + 2, 72);
+		gFight.mDrawSparks[i] = fightAction(145, DOCK_X[i] + 34, DOCK_Y + 1, 74);
+		if (gFight.mDrawSparks[i]) setMugenAnimationVisibility(gFight.mDrawSparks[i], 0);
 		gFight.mPips[i] = fightSprite(SPR_PIPS, 0, DOCK_X[i] + 2, DOCK_Y + 20, 72); // under the icon, in the art window
+		if (gFight.mThumbs[i]) setMugenAnimationVisibility(gFight.mThumbs[i], 0);
+		setMugenAnimationVisibility(gFight.mIcons[i], 0);
+		setMugenAnimationVisibility(gFight.mPips[i], 0);
 		gFight.mTileName[i] = fightText(" ", DOCK_X[i] + 25, DOCK_Y + 12, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_LEFT, WHITE, 73);
 		gFight.mTileState[i] = fightText(" ", DOCK_X[i] + 25, DOCK_Y + 22, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_LEFT, GREY, 73);
 	}
-	gFight.mFocus = fightSprite(SPR_FOCUS, 0, DOCK_X[0] - 2, DOCK_Y - 2, 74);
+	gFight.mFocus = fightAction(125, DOCK_X[0] - 2, DOCK_Y - 2, 74);
 	gFight.mArmed = fightSprite(SPR_ARMED, 0, DOCK_X[0], DOCK_Y, 74);
 	if (gFight.mArmed) setMugenAnimationVisibility(gFight.mArmed, 0);
 	fightSprite(SPR_HYPE, 0, HYPE_X, HYPE_Y, 70);
@@ -598,6 +668,10 @@ static void loadLegendsFight(void*) {
 	gFight.mClockText = fightText(" ", 160, 40, FIGHT_FONT_SMALL, MUGEN_TEXT_ALIGNMENT_CENTER, WHITE, 72);
 	gFight.mCpuText = fightText(" ", 312, 52, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_RIGHT, SIDE_COLOR[1], 72);
 	for (int s = 0; s < 2; s++) {
+		gFight.mAuras[s] = fightAction(143, 0, 0, 68);
+		gFight.mHeals[s] = fightAction(142, 0, 0, 69);
+		if (gFight.mAuras[s]) setMugenAnimationVisibility(gFight.mAuras[s], 0);
+		if (gFight.mHeals[s]) setMugenAnimationVisibility(gFight.mHeals[s], 0);
 		gFight.mAwakeText[s] = fightText(" ", s ? 284 : 36, 42, FIGHT_FONT_XS, s ? MUGEN_TEXT_ALIGNMENT_RIGHT : MUGEN_TEXT_ALIGNMENT_LEFT, FAMILY_COLOR[2], 72);
 		for (int i = 0; i < 3; i++) gFight.mSquadPips[s][i] = fightSprite(SPR_SQUAD, 0, s ? 296 - i * 7 : 18 + i * 7, 36, 72);
 	}
@@ -607,12 +681,14 @@ static void loadLegendsFight(void*) {
 	if (gFight.mBanner) setMugenAnimationVisibility(gFight.mBanner, 0);
 	gFight.mBannerText = fightText(" ", 160, 74, FIGHT_FONT_MED, MUGEN_TEXT_ALIGNMENT_CENTER, WHITE, 77);
 	gFight.mBannerSub = fightText(" ", 160, 84, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_CENTER, GREY, 77);
-	gFight.mInspect = fightSprite(SPR_INSPECT, 0, 105, 92, 78);
+	gFight.mInspect = fightSprite(SPR_INSPECT, 0, 30, 80, 78);
 	if (gFight.mInspect) setMugenAnimationVisibility(gFight.mInspect, 0);
-	gFight.mInspectTitle = fightText(" ", 112, 106, FIGHT_FONT_SMALL, MUGEN_TEXT_ALIGNMENT_LEFT, WHITE, 79);
-	gFight.mInspectBody = fightText(" ", 112, 118, FIGHT_FONT_RULES, MUGEN_TEXT_ALIGNMENT_LEFT, GREY, 79);
-	setMugenTextTextBoxWidth(gFight.mInspectBody, 96);
-	gFight.mInspectState = fightText(" ", 112, 182, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_LEFT, ORANGE, 79);
+	gFight.mInspectFace = fightSprite(100, 0, 38, 80, 78);
+	if (gFight.mInspectFace) setMugenAnimationVisibility(gFight.mInspectFace, 0);
+	gFight.mInspectTitle = fightText(" ", 112, 94, FIGHT_FONT_SMALL, MUGEN_TEXT_ALIGNMENT_LEFT, WHITE, 79);
+	gFight.mInspectBody = fightText(" ", 112, 106, FIGHT_FONT_RULES, MUGEN_TEXT_ALIGNMENT_LEFT, GREY, 79);
+	setMugenTextTextBoxWidth(gFight.mInspectBody, 172);
+	gFight.mInspectState = fightText(" ", 112, 173, FIGHT_FONT_XS, MUGEN_TEXT_ALIGNMENT_LEFT, ORANGE, 79);
 	gHasPendingResult = 0;
 }
 
@@ -621,6 +697,8 @@ static void unloadLegendsFight(void*) {
 	unloadMugenSpriteFile(&gFight.mSprites);
 	for (auto* a : gFight.mAnimations) destroyMugenAnimation(a);
 	gFight.mAnimations.clear();
+	gFight.mSpriteCache.clear();
+	unloadMugenAnimationFile(&gFight.mAir);
 	gFight.mEchoes.clear();
 }
 
@@ -686,14 +764,19 @@ static void applyActions(const std::vector<legends::Action>& tActions) {
 		}
 		case legends::ActionKind::Heal: {
 			DreamPlayer* p = getRootPlayer(a.side);
-			if (isPlayerAlive(p)) addPlayerLife(p, p, a.amount);
+			if (isPlayerAlive(p)) {
+				addPlayerLife(p, p, a.amount);
+				restartAction(gFight.mHeals[a.side], 142);
+				gFight.mHealUntil[a.side] = gFight.mFrame + 16;
+			}
 			showBanner(a.side, "RECOVERED", "+" + std::to_string(a.amount) + " HP");
 			break;
 		}
 		case legends::ActionKind::EchoSpawn: {
 			const int item = a.text == "chidori" ? 1 : 0;
-			auto* e = fightSprite(SPR_ECHO, item, a.x + offX, a.y + offY, 69);
-			gFight.mEchoes.push_back({a.echoId, e, a.x, a.y});
+			auto* e = fightAction(item ? 141 : 140, a.x + offX, a.y + offY, 69);
+			if (e) setMugenAnimationFaceDirection(e, getPlayerIsFacingRight(getRootPlayer(a.side)));
+			gFight.mEchoes.push_back({a.echoId, e, a.x, a.y, item ? 24.f : 16.f, item ? 16.f : 8.f, getPlayerIsFacingRight(getRootPlayer(a.side)) != 0});
 			break;
 		}
 		case legends::ActionKind::EchoMove:
@@ -703,7 +786,7 @@ static void applyActions(const std::vector<legends::Action>& tActions) {
 				it->x = a.x;
 				it->y = a.y;
 				if (a.kind == legends::ActionKind::EchoEnd) {
-					if (it->e) setMugenAnimationVisibility(it->e, 0);
+					if (it->e) removeMugenAnimation(it->e);
 					gFight.mEchoes.erase(it);
 				}
 				break;
@@ -717,7 +800,7 @@ static void applyActions(const std::vector<legends::Action>& tActions) {
 		}
 	}
 	for (auto& echo : gFight.mEchoes) {
-		if (echo.e) setMugenAnimationPosition(echo.e, Vector3D(echo.x + offX - 9, echo.y + offY - 9, 69));
+		if (echo.e) setMugenAnimationPosition(echo.e, Vector3D(echo.x + offX + (echo.right ? -echo.halfWidth : echo.halfWidth), echo.y + offY - echo.halfHeight, 69));
 	}
 }
 
@@ -736,19 +819,32 @@ static void updateHud() {
 		const auto& h = c.hand[i];
 		if (h.def != gFight.mShown[i]) { // a card arrived or left: swap the tile art
 			gFight.mShown[i] = h.def;
-			auto* anim = createOneFrameMugenAnimationForSprite(h.empty() ? SPR_EMPTY : SPR_TILE, h.empty() ? 0 : int(h.def->family));
-			gFight.mAnimations.push_back(anim);
-			changeMugenAnimation(gFight.mTiles[i], anim);
-			auto* icon = createOneFrameMugenAnimationForSprite(SPR_ICON, h.empty() ? 0 : int(h.def->family));
-			gFight.mAnimations.push_back(icon);
+			if (!gFight.mThumbs[i]) changeMugenAnimation(gFight.mTiles[i], fightFrame(h.empty() ? SPR_EMPTY : SPR_TILE, h.empty() ? 0 : int(h.def->family)));
+			if (gFight.mThumbs[i]) {
+				if (!h.empty()) changeMugenAnimation(gFight.mThumbs[i], fightFrame(101, cardArtIndex(h.def)));
+				setMugenAnimationVisibility(gFight.mThumbs[i], !h.empty());
+			}
+			auto* icon = fightFrame(SPR_ICON, h.empty() ? 0 : int(h.def->family));
 			changeMugenAnimation(gFight.mIcons[i], icon);
-			setMugenAnimationVisibility(gFight.mIcons[i], !h.empty());
-			auto* pips = createOneFrameMugenAnimationForSprite(SPR_PIPS, h.empty() ? 0 : int(h.def->rarity));
-			gFight.mAnimations.push_back(pips);
+			setMugenAnimationVisibility(gFight.mIcons[i], !h.empty() && !gFight.mThumbs[i]);
+			auto* pips = fightFrame(SPR_PIPS, h.empty() ? 0 : int(h.def->rarity));
 			changeMugenAnimation(gFight.mPips[i], pips);
 			setMugenAnimationVisibility(gFight.mPips[i], !h.empty());
 			changeMugenText(gFight.mTileName[i], h.empty() ? " " : h.def->shortName.c_str());
 		}
+		if (gFight.mThumbs[i]) {
+			const int group = h.empty() ? 124 : h.state == legends::CardState::Armed ? 121 : c.cooldown > 0 ? 122 : 120;
+			if (group != gFight.mTileGroup[i]) {
+				changeMugenAnimation(gFight.mTiles[i], fightFrame(group, 0));
+				gFight.mTileGroup[i] = group;
+			}
+		}
+		if (!h.empty() && h.uid != gFight.mLastUid[i]) {
+			restartAction(gFight.mDrawSparks[i], 145);
+			gFight.mDrawUntil[i] = gFight.mFrame + 12;
+		}
+		gFight.mLastUid[i] = h.empty() ? 0 : h.uid;
+		if (gFight.mDrawSparks[i] && gFight.mFrame >= gFight.mDrawUntil[i]) setMugenAnimationVisibility(gFight.mDrawSparks[i], 0);
 		static const char* KEY[3] = {"SQR", "TRI", "CIR"};
 		std::string st;
 		if (h.empty()) st = c.tickets.empty() ? "" : "DRAWING...";
@@ -769,6 +865,21 @@ static void updateHud() {
 	changeMugenText(gFight.mCpuText, ("CPU HAND " + std::to_string(m.coach[1].handCount())).c_str());
 	for (int s = 0; s < 2; s++) {
 		const int t = m.awakeningTicksLeft(s);
+		auto* p = getRootPlayer(s);
+		const float px = getPlayerScreenPositionX(p, 320), py = getPlayerScreenPositionY(p, 320);
+		if (gFight.mAuras[s]) {
+			const int kind = m.awakeningName(s) == "PLUS ULTRA" ? 144 : 143;
+			if (t > 0 && kind != gFight.mAuraKind[s] && hasMugenAnimation(&gFight.mAir, kind)) {
+				restartAction(gFight.mAuras[s], kind);
+				gFight.mAuraKind[s] = kind;
+			}
+			setMugenAnimationVisibility(gFight.mAuras[s], t > 0 && isPlayerAlive(p));
+			setMugenAnimationPosition(gFight.mAuras[s], Vector3D(px - 32, py - 90, 68));
+		}
+		if (gFight.mHeals[s]) {
+			setMugenAnimationVisibility(gFight.mHeals[s], gFight.mFrame < gFight.mHealUntil[s] && isPlayerAlive(p));
+			setMugenAnimationPosition(gFight.mHeals[s], Vector3D(px - 8, py - 36, 69));
+		}
 		char b[64];
 		snprintf(b, sizeof(b), "%s %d.%d", m.awakeningName(s).c_str(), t / 60, (t % 60) / 6);
 		changeMugenText(gFight.mAwakeText[s], t > 0 ? b : " ");
@@ -778,15 +889,23 @@ static void updateHud() {
 			const int want = mem.eliminated ? 2 : i == m.squad[s].active ? 0 : 1;
 			if (!e || gFight.mSquadShown[s][i] == want) continue;
 			gFight.mSquadShown[s][i] = want;
-			auto* anim = createOneFrameMugenAnimationForSprite(SPR_SQUAD, want);
-			gFight.mAnimations.push_back(anim);
+			auto* anim = fightFrame(SPR_SQUAD, want);
 			changeMugenAnimation(e, anim);
 		}
 	}
 	// inspection (L held): full rules of the focused card, D-pad moves the focus
-	const bool inspect = hasPressedLSingle(0) != 0;
-	if (gFight.mInspect) setMugenAnimationVisibility(gFight.mInspect, inspect);
+	const bool inspect = hasPressedLSingle(0) != 0 || (gLegends.mIsAutotest && gLegends.mAutotestInspect);
+		if (gLegends.mIsAutotest && gLegends.mAutotestInspect && c.hand[gFight.mFocusSlot].empty())
+		for (int i = 0; i < 3; ++i) if (!c.hand[i].empty()) { gFight.mFocusSlot = i; break; }
 	const auto& fc = c.hand[gFight.mFocusSlot];
+	if (gFight.mInspect) setMugenAnimationVisibility(gFight.mInspect, inspect && !fc.empty());
+	if (gFight.mInspectFace) {
+		setMugenAnimationVisibility(gFight.mInspectFace, inspect && !fc.empty());
+		if (!fc.empty() && fc.def != gFight.mInspectShown) {
+			changeMugenAnimation(gFight.mInspectFace, fightFrame(100, cardArtIndex(fc.def)));
+			gFight.mInspectShown = fc.def;
+		}
+	}
 	changeMugenText(gFight.mInspectTitle, inspect && !fc.empty() ? fc.def->name.c_str() : " ");
 	changeMugenText(gFight.mInspectBody, inspect && !fc.empty() ? (std::string(legends::familyName(fc.def->family)) + " / " + legends::rarityName(fc.def->rarity) + ": " + fc.def->text).c_str() : " ");
 	changeMugenText(gFight.mInspectState, inspect && !fc.empty() ? (fc.reason.empty() ? "HOLD R: DISCARD" : fc.reason).c_str() : " ");

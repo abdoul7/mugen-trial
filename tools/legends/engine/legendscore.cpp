@@ -310,6 +310,7 @@ std::vector<const CardDef*> Match::eligible(int side, bool openingCommonRare, Fa
 	const auto& c = coach[side];
 	const auto& member = squad[side].members[squad[side].active];
 	for (auto& d : catalog->cards) {
+		if (std::find(c.bannedCards.begin(), c.bannedCards.end(), d.id) != c.bannedCards.end()) continue;
 		if (!d.enabled) continue;                       // no safe implementation: never drawn
 		if (onlyFamily && d.family != *onlyFamily) continue;
 		if (openingCommonRare && d.rarity != Rarity::Common && d.rarity != Rarity::Rare) continue;

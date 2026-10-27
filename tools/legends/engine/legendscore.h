@@ -178,6 +178,7 @@ struct Coach {
 	std::map<std::string, int> uses;              // successful activations per card id this encounter
 	int drawIndex = 0;
 	int cardsDrawn = 0, cardsPlayed = 0;
+	std::vector<std::string> bannedCards; // test-only per-coach draw exclusions, set before the deal
 	std::vector<std::string> playedIds;
 	// CPU coach
 	bool isCpu = false;

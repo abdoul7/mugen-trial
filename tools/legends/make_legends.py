@@ -7,8 +7,8 @@ Writes <assets>/data/legends/:
   adapters.txt  tools/legends/adapters.json, same format
   legends.sff   HUD sprites: card tiles per family, icons, rarity pips, Hype rail, echoes,
                 panels (drawn here, no third-party art; 2x like the jfv motif)
-The card illustrations of docs/legends-design.md section 9 are not drawn yet: tiles show the
-family icon in the art window until the art kit exists.
+When the local kit is present (see legends_kit.py), include its card faces, thumbnails,
+hand frames and VFX animations. Without it the authored placeholders remain available.
 """
 import json
 import os

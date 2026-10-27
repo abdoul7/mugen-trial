@@ -44,7 +44,7 @@ VFX_GROUPS = [(140, "spirit_shot", 6), (141, "lightning", 4), (142, "heal", 4), 
               (145, "draw_spark", 6), (146, "time_ring", 6), (147, "reveal_edge", 6)]
 # animations: action number -> (group, frames, ticks per frame, loops)
 ACTIONS = {125: (125, 6, 2, True), 140: (140, 6, 2, True), 141: (141, 4, 2, True), 142: (142, 4, 4, False),
-           143: (143, 4, 4, True), 145: (145, 6, 2, False)}
+           143: (143, 4, 4, True), 144: (144, 4, 4, True), 145: (145, 6, 2, False)}
 
 
 def kit_dir():
