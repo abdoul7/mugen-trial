@@ -68,3 +68,16 @@ but run visibly slow there, and the Vita heap is 96 MB total.
 
 See `TODO.md`. Sourcing log: `reports/jf-sourcing.md`. Sourcing-agent prompt:
 `docs/hermes-sourcing-prompt.md`.
+
+## UI (2026-10-27)
+
+Read `handoff/UI.md` first. The owner's latest menu brief is `docs/ui-claude-prompt.md`.
+The current motif is jfv (`tools/make_ui.py`, branch `motif/jfv-ui`). Its native parts are
+engine patch 0009, which only the Vita build has. Test them in Vita3K, not the Windows exe.
+
+- The owner wants modern menu motion and clarity in the game's own arcade sprite style.
+- Rejected: generic browser-game UI, city skylines, a mascot, and the "Jump Rift" name.
+  Keep "Jump Force Vita" unless the owner approves a change.
+- The engine footer is removed in source (patch 0009). The engine is credited in `CREDITS.md`.
+- Codex's earlier experiment (`tools/arcade_motif.py`, `normalize_portraits.py`,
+  `verify_arcade.py`) stays on `motif/ui-overhaul` and is not used by jfv.

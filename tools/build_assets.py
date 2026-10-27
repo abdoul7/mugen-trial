@@ -13,6 +13,7 @@ Re-runnable: it wipes build/game and recreates it, so every change lives in this
     python tools/build_assets.py --prune-states # enable conservative state pruning
     python tools/build_assets.py --prune-sprites # enable conservative sprite pruning
     python tools/build_assets.py --motif tbm    # override roster.json's "motif" for this build
+    python tools/build_assets.py --motif jfv    # the Jump Force Vita UI (tools/make_ui.py)
 
 What it does, in order:
   1. copies the Dolmexica 1.8 engine (Windows exe + Vita kit + stock assets) to build/game
@@ -34,6 +35,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import make_ui  # noqa: E402
 import port_motif  # noqa: E402
 import shrink_snd  # noqa: E402
 import mugen_prune  # noqa: E402
@@ -425,6 +427,10 @@ def main():
                 t = t[:bg.start(1)] + body + t[bg.end(1):]
         write(sysdef, t)
         log(f"6. stock select grid -> {rows}x{cols} for {slots} slots")
+
+    if cfg.get("motif") == "jfv":
+        make_ui.main()
+        log("6. motif: Jump Force Vita UI (tools/make_ui.py -> data/jfv, font/jfv_*.fnt)")
 
     if cfg.get("motif") == "tbm":
         fonts = port_motif.port(ASSETS, len(select_chars) + (1 if cfg.get("randomselect") else 0))
