@@ -209,6 +209,58 @@ def copy_engine():
         (shutil.copytree if os.path.isdir(s) else shutil.copy2)(s, d)
 
 
+SIZE_LENGTHS = ("ground.back", "ground.front", "air.back", "air.front", "height")
+
+
+def scale_size_section(cns_path, factor):
+    """Multiply [Size] xscale/yscale (sprites AND hitboxes: prism scales Clsn by the draw scale) and the
+    body widths/height used for pushing and corner checks. Speeds (walk, jump) are left alone."""
+    text = read(cns_path)
+    m = re.search(r"(?is)(\[size\][^\n]*\n)(.*?)(?=\n\s*\[|$)", text)
+    if not m:
+        return False
+    body = m.group(2)
+    for key, default in (("xscale", 1.0), ("yscale", 1.0)):
+        if re.search(rf"(?im)^\s*{re.escape(key)}\s*=", body):
+            body = re.sub(rf"(?im)^(\s*{re.escape(key)}\s*=\s*)([-0-9.]+)",
+                          lambda mm: f"{mm.group(1)}{float(mm.group(2)) * factor:.4g}", body, count=1)
+        else:
+            body = f"{key} = {default * factor:.4g}\n" + body
+    for key in SIZE_LENGTHS:
+        body = re.sub(rf"(?im)^(\s*{re.escape(key)}\s*=\s*)(-?\d+)",
+                      lambda mm: f"{mm.group(1)}{max(1, round(int(mm.group(2)) * factor))}", body, count=1)
+    write(cns_path, text[:m.start(2)] + body + text[m.end(2):])
+    return True
+
+
+def match_heights(cfg):
+    """roster "fighter_height": "median" -> scale every fighter so it stands as tall as the median one
+    (tools/char_heights.py measures). Per character "height_scale": N overrides the computed factor
+    (1 = leave alone). Clamped to 0.4-1.6 so a bad measurement can't make anyone vanish or fill the screen."""
+    if cfg.get("fighter_height") != "median":
+        return
+    import statistics
+    import char_heights
+    rows = [r for r in char_heights.measure(ASSETS) if "height" in r]
+    if not rows:
+        return
+    median = statistics.median(r["height"] for r in rows)
+    overrides = {c["id"]: c["height_scale"] for c in cfg["characters"] if "height_scale" in c}
+    done = []
+    for r in rows:
+        factor = overrides.get(r["id"], median / r["height"])
+        factor = min(1.6, max(0.4, factor))
+        if abs(factor - 1) < 0.04:
+            continue
+        folder = os.path.dirname(r["def"])
+        d = read(r["def"])
+        cns = char_heights.files_key(d, "cns")
+        path = char_heights.find_ci(folder, cns) if cns else None
+        if path and scale_size_section(path, factor):
+            done.append(f"{r['id']} x{factor:.2f}")
+    log(f"5b. fighter heights -> median {median:.0f} px: {', '.join(done) or 'nothing to change'}")
+
+
 def main():
     with open(os.path.join(ROOT, "roster.json"), encoding="utf-8") as f:
         cfg = json.load(f)
@@ -324,6 +376,7 @@ def main():
              "team.maxmatches = 4,1,1,0,0,0,0,0,0,0", ""]
     write(os.path.join(ASSETS, "data", "select.def"), "\n".join(lines))
     log(f"5. select.def: {len(select_chars)} characters, {len(extra_stages)} stages")
+    match_heights(cfg)
 
     slots = len(select_chars) + (1 if cfg.get("randomselect") else 0)
     if cfg.get("motif") != "tbm":
