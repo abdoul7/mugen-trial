@@ -71,7 +71,7 @@ MANUAL = [
         ("Cross", "Light kick   (a)"),
         ("Circle", "Medium kick   (b)"),
         ("R", "Heavy kick   (c)"),
-        ("Start", "Menus: confirm / skip"),
+        ("Start", "Pause / resume a fight; confirm in menus"),
     ], "Punch/kick names follow the MUGEN convention; each fighter decides what its buttons do."),
     ("MENUS & SPECIAL MOVES", [
         ("Cross or Start", "Confirm (menus, character and stage select)"),
@@ -81,7 +81,8 @@ MANUAL = [
         ("Quarter circle", "Down, down-forward, forward + punch or kick"),
         ("Dragon punch", "Forward, down, down-forward + punch"),
         ("Charge", "Hold back 1-2 s, then forward + button"),
-    ], "Special moves differ per fighter; these are the common MUGEN motions to try first."),
+        ("Remap buttons", "Options > Input Config > Key Config > Config all"),
+    ], "Config all asks for each button in turn; saved automatically. Default (R) resets."),
 ]
 
 

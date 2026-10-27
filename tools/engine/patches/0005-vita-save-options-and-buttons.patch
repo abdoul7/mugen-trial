@@ -1,0 +1,179 @@
+diff --git a/repo/config.cpp b/repo/config.cpp
+index 3971d4f..7762dba 100644
+--- a/repo/config.cpp
++++ b/repo/config.cpp
+@@ -295,7 +295,7 @@ void loadMugenConfig() {
+ 
+ 	setDefaultOptionVariables();
+ 
+-	if (isOnDreamcast()) {
++	if (isOnDreamcast() || isOnVita()) { // [JFV] patch 0005
+ 		loadMugenConfigSave(PrismSaveSlot::AUTOMATIC);
+ 	}
+ }
+@@ -733,6 +733,87 @@ static void loadMugenConfigDreamcast(PrismSaveSlot tSaveSlot) {
+ }
+ #endif
+ 
++#ifdef VITA
++// [JFV] patch 0005: Dolmexica only persists options on Windows (mugen.cfg) and Dreamcast (VMU).
++// On the Vita app0: is read-only, so options and the button layout go to ux0:data/JFVT00001.
++#include <stdio.h>
++#include <psp2/io/stat.h>
++#include <psp2/io/fcntl.h>
++#define JFV_SAVE_DIR "ux0:data/JFVT00001"
++#define JFV_SAVE_PATH JFV_SAVE_DIR "/options.bin"
++typedef struct {
++	char mMagic[4];
++	uint32_t mVersion;
++	int32_t mDifficulty;
++	int32_t mLifeStartPercentageNumber;
++	int32_t mTimerDuration;
++	int32_t mGameSpeed;
++	int32_t mWavVolume;
++	int32_t mMidiVolume;
++	uint8_t mKeys[2][CONTROLLER_BUTTON_AMOUNT_PRISM];
++} JfvVitaOptionsSave;
++
++static void saveMugenConfigVita() {
++	JfvVitaOptionsSave s;
++	memcpy(s.mMagic, "JFVO", 4);
++	s.mVersion = 1;
++	s.mDifficulty = int32_t(gConfigData.mOptions.mActive.mDifficulty);
++	s.mLifeStartPercentageNumber = int32_t(gConfigData.mOptions.mActive.mLifeStartPercentageNumber);
++	s.mTimerDuration = int32_t(gConfigData.mOptions.mActive.mTimerDuration);
++	s.mGameSpeed = int32_t(gConfigData.mOptions.mActive.mGameSpeed);
++	s.mWavVolume = int32_t(gConfigData.mOptions.mActive.mWavVolume);
++	s.mMidiVolume = int32_t(gConfigData.mOptions.mActive.mMidiVolume);
++	for (int i = 0; i < 2; i++) {
++		for (int j = 0; j < int(CONTROLLER_BUTTON_AMOUNT_PRISM); j++) {
++			s.mKeys[i][j] = uint8_t(getButtonForController(i, ControllerButtonPrism(j)));
++		}
++	}
++	sceIoMkdir(JFV_SAVE_DIR, 0777);
++	FILE* f = fopen(JFV_SAVE_PATH, "wb");
++	if (!f) {
++		logWarning("[JFV] unable to write " JFV_SAVE_PATH);
++		return;
++	}
++	fwrite(&s, sizeof(s), 1, f);
++	fclose(f);
++	logg("[JFV] saved options to " JFV_SAVE_PATH);
++}
++
++static int hasMugenConfigSaveVita() {
++	FILE* f = fopen(JFV_SAVE_PATH, "rb");
++	if (!f) return 0;
++	fclose(f);
++	return 1;
++}
++
++static void loadMugenConfigVita() {
++	FILE* f = fopen(JFV_SAVE_PATH, "rb");
++	if (!f) return;
++	JfvVitaOptionsSave s;
++	const size_t n = fread(&s, sizeof(s), 1, f);
++	fclose(f);
++	if (n != 1 || memcmp(s.mMagic, "JFVO", 4) || s.mVersion != 1) {
++		logWarning("[JFV] ignoring unreadable " JFV_SAVE_PATH);
++		return;
++	}
++	gConfigData.mOptions.mDefault.mDifficulty = s.mDifficulty;
++	gConfigData.mOptions.mDefault.mLifeStartPercentageNumber = s.mLifeStartPercentageNumber;
++	gConfigData.mOptions.mDefault.mIsTimerInfinite = false;
++	gConfigData.mOptions.mDefault.mTimerDuration = s.mTimerDuration;
++	gConfigData.mOptions.mDefault.mGameSpeed = s.mGameSpeed;
++	gConfigData.mOptions.mDefault.mWavVolume = s.mWavVolume;
++	gConfigData.mOptions.mDefault.mMidiVolume = s.mMidiVolume;
++	for (int i = 0; i < 2; i++) {
++		for (int j = 0; j < int(CONTROLLER_BUTTON_AMOUNT_PRISM); j++) {
++			const int value = s.mKeys[i][j];
++			if (value < int(CONTROLLER_BUTTON_AMOUNT_PRISM)) setButtonForController(i, ControllerButtonPrism(j), ControllerButtonPrism(value));
++		}
++	}
++	setDefaultOptionVariables();
++	logg("[JFV] loaded options from " JFV_SAVE_PATH);
++}
++#endif
++
+ void loadMugenConfigSave(PrismSaveSlot tSaveSlot)
+ {
+ #ifdef _WIN32
+@@ -740,6 +821,9 @@ void loadMugenConfigSave(PrismSaveSlot tSaveSlot)
+ 	loadMugenConfig();
+ #elif defined(DREAMCAST)
+ 	loadMugenConfigDreamcast(tSaveSlot);
++#elif defined(VITA)
++	(void)tSaveSlot;
++	loadMugenConfigVita();
+ #endif
+ }
+ 
+@@ -895,6 +979,9 @@ void saveMugenConfigSave(PrismSaveSlot tSaveSlot)
+ 	saveMugenConfigWindows();
+ #elif defined(DREAMCAST)
+ 	saveMugenConfigDreamcast(tSaveSlot);
++#elif defined(VITA)
++	(void)tSaveSlot;
++	saveMugenConfigVita();
+ #endif
+ }
+ 
+@@ -905,6 +992,9 @@ void deleteMugenConfigSave(PrismSaveSlot tSaveSlot)
+ 	deleteMugenConfigWindows();
+ #elif defined(DREAMCAST)
+ 	deleteMugenConfigDreamcast(tSaveSlot);
++#elif defined(VITA)
++	(void)tSaveSlot;
++	sceIoRemove(JFV_SAVE_PATH);
+ #endif
+ }
+ 
+@@ -915,6 +1005,9 @@ int hasMugenConfigSave(PrismSaveSlot tSaveSlot)
+ 	return hasMugenConfigSaveWindows();
+ #elif defined(DREAMCAST)
+ 	return hasMugenConfigSaveDreamcast(tSaveSlot);
++#elif defined(VITA)
++	(void)tSaveSlot;
++	return hasMugenConfigSaveVita();
+ #else
+ 	return 0;
+ #endif
+@@ -926,6 +1019,8 @@ size_t getMugenConfigSaveSize()
+ 	return getMugenConfigSaveSizeWindows();
+ #elif defined(DREAMCAST)
+ 	return getMugenConfigSaveSizeDreamcast();
++#elif defined(VITA)
++	return sizeof(JfvVitaOptionsSave);
+ #else
+ 	return 0;
+ #endif
+diff --git a/repo/optionsscreen.cpp b/repo/optionsscreen.cpp
+index 7a7f246..d739f28 100644
+--- a/repo/optionsscreen.cpp
++++ b/repo/optionsscreen.cpp
+@@ -975,7 +975,7 @@ static void handleOptionScreenGeneralSelectLoadSaveOptions(GeneralSettingType tT
+ 		handleOptionScreenGeneralSelectLoadSaveOptionsDreamcast(tType);
+ 		tryPlayMugenSoundAdvanced(&gOptionsScreenData.mSounds, gOptionsScreenData.mHeader.mCursorDoneSound.x, gOptionsScreenData.mHeader.mCursorDoneSound.y, parseGameMidiVolumeToPrism(getGameMidiVolume()));
+ 	}
+-	else if (isOnWindows()) {
++	else if (isOnWindows() || isOnVita()) { // [JFV] patch 0005
+ 		handleOptionScreenGeneralSelectLoadSaveOptionsWindows(tType, tLoad, tSave);
+ 		tryPlayMugenSoundAdvanced(&gOptionsScreenData.mSounds, gOptionsScreenData.mHeader.mCursorDoneSound.x, gOptionsScreenData.mHeader.mCursorDoneSound.y, parseGameMidiVolumeToPrism(getGameMidiVolume()));
+ 	}
+@@ -987,6 +987,7 @@ static void updateOptionScreenGeneralSelect() {
+ 	}
+ 	else if (gOptionsScreenData.mGeneral.mSelected == GENERAL_SETTING_RETURN) {
+ 		tryPlayMugenSoundAdvanced(&gOptionsScreenData.mSounds, gOptionsScreenData.mHeader.mCancelSound.x, gOptionsScreenData.mHeader.mCancelSound.y, parseGameMidiVolumeToPrism(getGameMidiVolume()));
++		if (isOnVita()) saveMugenConfigSave(PrismSaveSlot::AUTOMATIC); // [JFV] patch 0005: autosave
+ 		setNewScreen(getDreamTitleScreen());
+ 	} 
+ 	else if (gOptionsScreenData.mGeneral.mSelected == GENERAL_SETTING_LOAD_SAVE_OPTIONS) {
+@@ -1189,6 +1190,7 @@ static void updateOptionScreenGeneral() {
+ 	}
+ 
+ 	if (hasPressedBFlank()) {
++		if (isOnVita()) saveMugenConfigSave(PrismSaveSlot::AUTOMATIC); // [JFV] patch 0005: autosave
+ 		setNewScreen(getDreamTitleScreen());
+ 	}
+ }
