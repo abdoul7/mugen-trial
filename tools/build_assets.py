@@ -377,6 +377,12 @@ def main():
              "team.maxmatches = 4,1,1,0,0,0,0,0,0,0", ""]
     write(os.path.join(ASSETS, "data", "select.def"), "\n".join(lines))
     log(f"5. select.def: {len(select_chars)} characters, {len(extra_stages)} stages")
+    # every stage a character fights on must exist, or that fight crashes on load
+    missing = sorted({s.split(",")[1].strip() for s in select_chars if "," in s}
+                     - {f"stages/{f}" for f in os.listdir(os.path.join(ASSETS, "stages"))})
+    if missing:
+        raise SystemExit(f"select.def points at stages that are not in the build: {', '.join(missing)} "
+                         "(give the character a full stage entry with id/def/music in roster.json)")
     match_heights(cfg)
 
     slots = len(select_chars) + (1 if cfg.get("randomselect") else 0)
