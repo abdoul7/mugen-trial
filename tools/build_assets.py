@@ -260,6 +260,13 @@ def main():
             padding = strip_cls_padding(os.path.dirname(def_path))
             if padding:
                 changes.append(f"stripped {padding} '&cls' padding lines from scripts")
+            if c.get("portraits"):
+                # wrong/missing select-screen portraits: rebuild 9000,0 and 9000,1 from another sprite
+                import fix_portraits
+                spr = re.search(r"(?im)^\s*sprite\s*=\s*([^;\r\n]+)", read(def_path)).group(1).strip()
+                air = "".join(read(os.path.join(dst, f)) for f in os.listdir(dst) if f.lower().endswith(".air"))
+                used = {(9000, int(m)) for m in re.findall(r"(?m)^\s*9000\s*,\s*(\d+)\s*,", air)}
+                changes.append(fix_portraits.fix(os.path.join(dst, spr), c["portraits"]["from"], used))
             if c.get("sprite_cap"):
                 # read by the Vita engine (tools/engine/patches/0002): this fighter's sprites above N px
                 # are stored downscaled; other fighters keep the engine default (512)

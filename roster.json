@@ -139,7 +139,13 @@
       },
       "drop_files": [
         "backup"
-      ]
+      ],
+      "portraits": {
+        "from": [
+          9000,
+          10
+        ]
+      }
     },
     {
       "id": "bardock_ssj",
