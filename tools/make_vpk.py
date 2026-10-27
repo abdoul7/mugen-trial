@@ -126,6 +126,10 @@ def main():
     out = os.path.join(VITA, "build", f"{TITLE_ID}.vpk")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     assets = os.path.join(VITA, "..", "assets")
+    # --no-assets: engine + LiveArea only (a few MB, installs in seconds). The ~1.3 GB assets folder is then
+    # copied straight to ux0:app/JFVT00001/assets over USB/FTP: a 1.3 GB vpk is slow for VitaShell to
+    # unpack and promote, and the Vita going to sleep mid-install can hang the system.
+    with_assets = "--no-assets" not in sys.argv
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("sce_sys/param.sfo", param)
         z.write(engine, "eboot.bin")
@@ -136,7 +140,7 @@ def main():
             z.write(path, f"sce_sys/manual/{i:03d}.png")
         for rel in ("icon0.png", "livearea/contents/bg.png", "livearea/contents/startup.png", "livearea/contents/template.xml"):
             z.write(os.path.join(sce, rel), f"sce_sys/{rel}")
-        for dp, _, fs in os.walk(assets):
+        for dp, _, fs in (os.walk(assets) if with_assets else []):
             for f in fs:
                 if f.endswith((".soakbak", ".tmp")) or f.lower() == "thumbs.db":
                     continue
