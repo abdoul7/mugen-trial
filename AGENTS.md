@@ -81,3 +81,31 @@ engine patch 0009, which only the Vita build has. Test them in Vita3K, not the W
 - The engine footer is removed in source (patch 0009). The engine is credited in `CREDITS.md`.
 - Codex's earlier experiment (`tools/arcade_motif.py`, `normalize_portraits.py`,
   `verify_arcade.py`) stays on `motif/ui-overhaul` and is not used by jfv.
+
+## Legends mode (2026-10-27)
+
+Branch `mode/legends`, stacked on `motif/jfv-ui`. Contract: `docs/legends-design.md`. State,
+what is tested and what isn't: `reports/legends-status.md`.
+
+- Rules live in `tools/legends/engine/legendscore.cpp`: plain C++ with no engine dependency.
+  Unit tests: `python tools/legends/make_legends.py --no-art && bash tools/legends/tests/run.sh`.
+- The engine side is `legendsmode.cpp` plus patch 0010. `build_vita.sh` copies
+  `tools/legends/engine/*` into the engine tree. It runs only on the Vita build: test in Vita3K
+  with `tools/legends/vita3k_legends_autotest.py`, which is hands-off.
+- Cards are data: `tools/legends/catalog.json`. A card without a safe implementation stays
+  `enabled: false` with a reason. Never fake it with an unrelated buff.
+- Adapters (`tools/legends/adapters.json`) list a character's own command names per tag, checked
+  against its `.cmd`. Mark `custom_ai` when the character scripts its own AI.
+
+### Legends kit renderer continuation (2026-10-27)
+
+The renderer now uses the optional local kit for hand frames/thumbnails, opening-deal and
+inspect faces, AIR-animated spirit-shot/lightning echoes, heal particles, red/teal Awakening
+auras and draw sparks. Run `python tools/legends/tests/test_legends_art.py` to round-trip
+SFF/AIR references with the kit and with the placeholder fallback. Keep kit assets ignored.
+
+Autotest: `--ban-p1 my_ninja_way` excludes that ID from player-coach opening AND later draws;
+`--attach 0` alone does not. `--inspect --setup-ticks 300` exercises the art views hands-off.
+The runner requires a confirmed results-exit marker and fails on banned-card violations.
+See `reports/legends-renderer.md` for emulator evidence and the corrected coaching comparison.
+The five disabled cards, squad reordering, sound and physical Vita testing remain outstanding.

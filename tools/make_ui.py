@@ -129,6 +129,7 @@ FONTS = {  # file: (cap px, kwargs)
     "jfv_h.fnt": (14, {"gradient": ((255, 246, 180), ORANGE)}),       # focus panel: mode name
     "jfv_sd.fnt": (7, {"fill": (205, 214, 232)}),                     # focus panel: description
     "jfv_xs.fnt": (6, {}),                                            # fight names (long ones must clear the timer)
+    "jfv_t.fnt": (5, {"fill": (205, 214, 232)}),                      # Legends rules text
 }
 
 
@@ -270,7 +271,7 @@ def fight_sprites():
 FIGHT_KEYS = {
     # fonts 2, 4, 6, 7, 8 are 1x: the texts using them are not scaled by the engine (make_fonts)
     "files": {"font1": "jfv_m.fnt", "font2": "jfv_num1.fnt", "font3": "jfv_s.fnt", "font4": "jfv_l1.fnt", "font5": "jfv_mhi.fnt",
-              "font6": "jfv_time1.fnt", "font7": "jfv_m1.fnt", "font8": "jfv_s1.fnt", "font9": "jfv_xs.fnt"},
+              "font6": "jfv_time1.fnt", "font7": "jfv_m1.fnt", "font8": "jfv_s1.fnt", "font9": "jfv_xs.fnt", "font10": "jfv_t.fnt"},
     "lifebar": {
         "p1.pos": f"{P1_LIFE_X},{LIFE_Y}", "p1.range.x": f"0,-{LIFE_W - 1}",
         "p2.pos": f"{P2_LIFE_X},{LIFE_Y}", "p2.range.x": f"0,{LIFE_W - 1}", "p2.bg1.spr": "14,0",
@@ -628,6 +629,8 @@ def bg(name, **kv):
 #            can never pick a fighter; restore it once two-pad input exists
 MENU_ITEMS = [
     ("arcade", "ARCADE", "Fight a ladder of CPU opponents, one match after another."),
+    # engine patch 0010 (tools/legends): needs the Vita build; a stock engine skips the item
+    ("legends", "LEGENDS", "Coach a squad of three. The fighters are CPU, you play the cards."),
     ("freeplay", "FREE PLAY", "Pick your fighter, the opponent and the stage, then fight the CPU."),
     ("survival", "SURVIVAL", "One health bar against an endless line of CPU fighters."),
     ("training", "TRAINING", "Practise moves and combos against a dummy, with no timer."),
@@ -677,7 +680,8 @@ SYSTEM_KEYS = {
     # 1x fonts (make_fonts): 2 (the options screen draws font 2 unscaled, optionsscreen.cpp:846), 6, 7
     "files": {"font1": "font/jfv_s.fnt", "font2": "font/jfv_s1.fnt", "font3": "font/jfv_mdim.fnt", "font4": "font/jfv_mhi.fnt",
               "font5": "font/jfv_l.fnt", "font6": "font/jfv_m1.fnt", "font7": "font/jfv_mhi1.fnt",
-              "font8": "font/jfv_h.fnt", "font9": "font/jfv_sd.fnt", "font10": "font/jfv_m.fnt"},
+              "font8": "font/jfv_h.fnt", "font9": "font/jfv_sd.fnt", "font10": "font/jfv_m.fnt",
+              "font11": "font/jfv_xs.fnt", "font12": "font/jfv_t.fnt"},  # 11, 12: Legends lists and rules
     "title info": dict(
         {"menu.pos": f"{MENU_X},{MENU_Y}", "menu.item.font": "3,0,1", "menu.item.active.font": "10,0,1",
          "menu.item.spacing": f"0,{MENU_STEP}", "menu.window.visibleitems": str(len(MENU_ITEMS)),
@@ -857,6 +861,10 @@ def main():
     t = read(cfg)
     t = re.sub(r"(?im)^(\s*motif\s*=\s*)[^;\n]*", r"\1data/jfv/system.def", t)
     write(cfg, t)
+    # Legends mode data (catalog, adapters, HUD sprites): tools/legends/make_legends.py
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "legends"))
+    import make_legends
+    make_legends.main()
     if "--preview" in sys.argv:
         preview(fs, "fight")
         preview(ss, "system")

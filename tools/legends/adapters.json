@@ -1,0 +1,9 @@
+{
+  "notes": "Verified CharacterAdapters (docs/legends-design.md section 7). Tags name the character's OWN commands, checked against its .cmd; the engine also checks they exist at fight load and drops the adapter if one is missing. custom_ai = the character runs its own scripted AI, so generic coaching may be ignored by it.",
+  "adapters": [
+    {"id": "kfm", "match": "kfm/kfm.def", "custom_ai": false, "verified": "kfm.cmd: FF = F,F dash; x, a, down_a = light normals",
+     "tags": {"approach": ["FF"], "poke": ["x", "a", "down_a"]}},
+    {"id": "pupa", "match": "pupa/pupa.def", "custom_ai": false, "verified": "Pupa.cmd: FF dash; x, a, down_a normals; no cpu-detect commands",
+     "tags": {"approach": ["FF"], "poke": ["x", "a", "down_a"]}}
+  ]
+}
