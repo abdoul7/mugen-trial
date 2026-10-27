@@ -9,6 +9,9 @@ Re-runnable: it wipes build/game and recreates it, so every change lives in this
     python tools/build_assets.py --no-shrink # keep character .snd files untouched
     python tools/build_assets.py --skip-missing # leave out characters whose source folder is
                                                 # absent (e.g. AK1 archives you haven't got)
+    python tools/build_assets.py --no-minify    # do not minify character scripts
+    python tools/build_assets.py --prune-states # enable conservative state pruning
+    python tools/build_assets.py --prune-sprites # enable conservative sprite pruning
     python tools/build_assets.py --motif tbm    # override roster.json's "motif" for this build
 
 What it does, in order:
@@ -33,6 +36,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import port_motif  # noqa: E402
 import shrink_snd  # noqa: E402
+import mugen_prune  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE = os.path.join(ROOT, "engine", "Dolmexica Infinite 1.8")
@@ -144,6 +148,36 @@ def patch_char_def(def_path, localcoord, overrides=None):
     return changes
 
 
+def apply_script_fixes(character_dir, fixes):
+    """Apply exact, uniquely matching text replacements to copied character files."""
+    root = os.path.realpath(character_dir)
+    for fix in fixes:
+        target = os.path.realpath(os.path.join(root, fix["file"]))
+        if os.path.commonpath((root, target)) != root or target == root:
+            raise ValueError("script fix must stay inside the character directory")
+        original = read(target)
+        find = fix["find"]
+        if not find or original.count(find) != 1:
+            raise ValueError(f"script fix must match exactly once: {fix['file']}")
+        write(target, original.replace(find, fix["replace"], 1))
+
+
+def compress_copied_character(def_path, data_dir, minify=True, prune_states=False, prune_sprites=False):
+    stats = mugen_prune.compress_character(def_path, data_dir, minify, prune_states, prune_sprites)
+    changes = []
+    if minify:
+        changes.append(f"minified {stats['minify_changed']}/{stats['minify_files']} files "
+                       f"({stats['minify_before']}->{stats['minify_after']} bytes)")
+    if prune_states:
+        changes.append(f"states removed {stats['states_removed']}" +
+                       (" (dynamic target: kept all)" if stats['states_dynamic'] else ""))
+    if prune_sprites:
+        changes.append(f"sprites removed {stats['sprites_removed']}/{stats['sprites_before']} "
+                       f"({stats['sprite_before_bytes']}->{stats['sprite_after_bytes']} bytes)" +
+                       (" (dynamic sprite: kept all)" if stats['sprites_dynamic'] else ""))
+    return changes
+
+
 def ffmpeg():
     import imageio_ffmpeg
     return imageio_ffmpeg.get_ffmpeg_exe()
@@ -180,6 +214,9 @@ def main():
         cfg = json.load(f)
     music = "--no-music" not in sys.argv
     no_shrink = "--no-shrink" in sys.argv
+    minify = "--no-minify" not in sys.argv
+    prune_states = "--prune-states" in sys.argv
+    prune_sprites = "--prune-sprites" in sys.argv
     skip_missing = "--skip-missing" in sys.argv
     if "--motif" in sys.argv:  # try a motif without editing roster.json
         cfg["motif"] = sys.argv[sys.argv.index("--motif") + 1]
@@ -194,6 +231,11 @@ def main():
         cid = c["id"]
         if c.get("source") == "stock":
             entry = c.get("def", cid)
+            stock_def = os.path.join(ASSETS, "chars", cid, f"{cid}.def")
+            if os.path.isfile(stock_def):
+                changes = compress_copied_character(stock_def, os.path.join(ASSETS, "data"),
+                                                    minify, prune_states, prune_sprites)
+                log(f"2. char {cid:10s} <- stock  {'; '.join(changes) or 'compression disabled'}")
         else:
             src = os.path.join(ROOT, c["root"], c["folder"]) if "root" in c else os.path.join(demo, "Chars", c["folder"])
             if skip_missing and not os.path.isdir(src):
@@ -225,6 +267,12 @@ def main():
                 d = re.sub(r"(?im)^(\s*\[info\][^\n]*\n)", lambda m: f"{m.group(1)}jfv.spritecap = {int(c['sprite_cap'])}\n", d, count=1)
                 write(def_path, d)
                 changes.append(f"jfv.spritecap {c['sprite_cap']}")
+            fixes = c.get("script_fixes", [])
+            if fixes:
+                apply_script_fixes(dst, fixes)
+                changes.append(f"applied {len(fixes)} script fixes")
+            changes.extend(compress_copied_character(def_path, os.path.join(ASSETS, "data"),
+                                                      minify, prune_states, prune_sprites))
             snd = re.search(r"(?im)^\s*sound\s*=\s*([^;\r\n]+)", read(def_path))
             if snd and not no_shrink:
                 sp = os.path.join(dst, snd.group(1).strip())

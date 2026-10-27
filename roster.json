@@ -299,36 +299,27 @@
         "def": "stages/ship.def"
       },
       "sprite_cap": 256,
-      "snd_rate": 16000
+      "snd_rate": 11025
     },
     {
       "id": "androide_c_18",
       "root": "source/jf",
       "folder": "androide_c_18/Androide-C-18",
       "def": "Androide-C-18.def",
+      "script_fixes": [
+        {
+          "file": "Androide-C-18.cns",
+          "find": "[StateDef 1102]",
+          "replace": "[Statedef 362]\ntype = S\nphysics = N\n[State 362, cleanup]\ntype = DestroySelf\ntrigger1 = 1\n[StateDef 1102]"
+        }
+      ],
       "source_note": "AK1 download (Androide-C-18.zip); was rejected on sprite-file size (113.6 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256.",
       "stage": {
         "source": "stock",
         "def": "stages/snorlax.def"
       },
       "sprite_cap": 256,
-      "snd_rate": 16000
-    },
-    {
-      "id": "vegito",
-      "root": "source/jf",
-      "folder": "vegito/Vegito",
-      "def": "Vegito.def",
-      "source_note": "AK1 download (Vegito.rar); was rejected on sprite-file size (69.1 MB + stcommon common1.dll). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256. Its .def loads stcommon = common1.dll (a disguised common file; .dll is never extracted), so stcommon points at the engine's common1.cns instead.",
-      "stage": {
-        "source": "stock",
-        "def": "stages/kfm.def"
-      },
-      "sprite_cap": 256,
-      "snd_rate": 16000,
-      "def_overrides": {
-        "stcommon": "common1.cns"
-      }
+      "snd_rate": 11025
     },
     {
       "id": "ichibe_hyosube",
@@ -401,6 +392,26 @@
           "id": "kfm720",
           "def": "Original/kfm.def",
           "music": "Sound/Original/kfm.mp3"
+        }
+      }
+    },
+    {
+      "id": "vegito",
+      "reason": "Vita3K: black screen for 2+ minutes, never reaches the fight (4.8 MB of scripts after the &cls padding is stripped). Task 4 of docs/plan-heavy-chars.md is still open; re-add when it loads within 60 s.",
+      "entry": {
+        "id": "vegito",
+        "root": "source/jf",
+        "folder": "vegito/Vegito",
+        "def": "Vegito.def",
+        "source_note": "AK1 download (Vegito.rar); was rejected on sprite-file size (69.1 MB + stcommon common1.dll). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256. Its .def loads stcommon = common1.dll (a disguised common file; .dll is never extracted), so stcommon points at the engine's common1.cns instead.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kfm.def"
+        },
+        "sprite_cap": 256,
+        "snd_rate": 11025,
+        "def_overrides": {
+          "stcommon": "common1.cns"
         }
       }
     }
