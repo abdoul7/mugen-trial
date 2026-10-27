@@ -125,6 +125,10 @@ FONTS = {  # file: (cap px, kwargs)
     "jfv_num.fnt": (12, {"digits_only": True}),
     "jfv_time.fnt": (9, {"digits_only": True, "gap": 0}),
     "jfv_l.fnt": (18, {"gradient": ((255, 246, 180), ORANGE), "ow": 2}),
+    "jfv_mdim.fnt": (9, {"fill": (136, 152, 190)}),                   # unselected menu items
+    "jfv_h.fnt": (14, {"gradient": ((255, 246, 180), ORANGE)}),       # focus panel: mode name
+    "jfv_sd.fnt": (7, {"fill": (205, 214, 232)}),                     # focus panel: description
+    "jfv_xs.fnt": (6, {}),                                            # fight names (long ones must clear the timer)
 }
 
 
@@ -266,7 +270,7 @@ def fight_sprites():
 FIGHT_KEYS = {
     # fonts 2, 4, 6, 7, 8 are 1x: the texts using them are not scaled by the engine (make_fonts)
     "files": {"font1": "jfv_m.fnt", "font2": "jfv_num1.fnt", "font3": "jfv_s.fnt", "font4": "jfv_l1.fnt", "font5": "jfv_mhi.fnt",
-              "font6": "jfv_time1.fnt", "font7": "jfv_m1.fnt", "font8": "jfv_s1.fnt"},
+              "font6": "jfv_time1.fnt", "font7": "jfv_m1.fnt", "font8": "jfv_s1.fnt", "font9": "jfv_xs.fnt"},
     "lifebar": {
         "p1.pos": f"{P1_LIFE_X},{LIFE_Y}", "p1.range.x": f"0,-{LIFE_W - 1}",
         "p2.pos": f"{P2_LIFE_X},{LIFE_Y}", "p2.range.x": f"0,{LIFE_W - 1}", "p2.bg1.spr": "14,0",
@@ -281,7 +285,7 @@ FIGHT_KEYS = {
         "p1.pos": "2,3", "p1.face.offset": "2,2",
         "p2.pos": "317,3", "p2.bg.spr": "51,0", "p2.face.offset": "-2,2",
     },
-    "name": {"p1.pos": "36,29", "p1.name.font": "3,0,1", "p2.pos": "284,29", "p2.name.font": "3,0,-1"},
+    "name": {"p1.pos": "36,28", "p1.name.font": "9,0,1", "p2.pos": "284,28", "p2.name.font": "9,0,-1"},
     "time": {"pos": "160,17", "bg.spr": "120,0", "bg.offset": "0,-9", "counter.font": "6,0,0"},
     "winicon": {"p1.pos": "141,25", "p2.pos": "179,25", "p1.iconoffset": "-9,0", "p2.iconoffset": "9,0",
                 "p1.counter.font": "8,0", "p2.counter.font": "8,0"},
@@ -332,29 +336,134 @@ def backdrop(w=320, h=240, tint=(0, 0, 0)):
     return bg
 
 
-def logo():
-    jf = text("JUMP FORCE", 30, gradient=((255, 250, 210), (255, 132, 24)), outline=(24, 8, 0), ow=2)
-    vt = text("VITA", 12, fill=WHITE, outline=None, ow=0)
-    tag_w, tag_h = vt.size[0] / K + 16, vt.size[1] / K + 6  # units
+def logo(cap=30):
+    s = cap / 30
+    jf = text("JUMP FORCE", cap, gradient=((255, 250, 210), (255, 132, 24)), outline=(24, 8, 0), ow=2 if cap >= 20 else 1)
+    vt = text("VITA", 12 * s, fill=WHITE, outline=None, ow=0)
+    tag_w, tag_h = vt.size[0] / K + 16 * s, vt.size[1] / K + 6 * s  # units
     tag = canvas(tag_w, tag_h)
     d = ImageDraw.Draw(tag)
-    poly(d, para(0, 0, tag_w, tag_h, 5), (*P2C, 255))
+    poly(d, para(0, 0, tag_w, tag_h, 5 * s), (*P2C, 255))
     tag = done(tag)
-    tag.paste(vt, ((tag.size[0] - vt.size[0]) // 2, px(3)), vt)
-    w = jf.size[0] + px(6)
-    c = Image.new("RGBA", (w, jf.size[1] + tag.size[1] + px(2)), (0, 0, 0, 0))
+    tag.paste(vt, ((tag.size[0] - vt.size[0]) // 2, px(3 * s)), vt)
+    w = jf.size[0] + px(6 * s)
+    c = Image.new("RGBA", (w, jf.size[1] + tag.size[1] + px(2 * s)), (0, 0, 0, 0))
     c.paste(jf, (0, 0), jf)
-    c.paste(tag, (w - tag.size[0] - px(4), jf.size[1] + px(1)), tag)
+    c.paste(tag, (w - tag.size[0] - px(4 * s), jf.size[1] + px(1 * s)), tag)
     return c
 
 
-def menu_panel():
-    w, h = 170, 84
+# ---- main menu (title screen). Layout in 320 units: a stable mode list on the left, a focus panel
+# on the right with the selected mode's name and what it does, controller hints along the bottom.
+MENU_X, MENU_Y, MENU_STEP = 30, 74, 15      # first item's text position, row spacing
+LIST_W = 158                               # left panel width
+FOCUS_X, FOCUS_Y, FOCUS_W, FOCUS_H = 170, 58, 138, 150
+HINT_Y = 222                               # top of the hint bar (replaces the engine footer)
+
+
+def list_panel(rows):
+    w, h = LIST_W, MENU_STEP * rows + 22
     c = canvas(w, h)
     d = ImageDraw.Draw(c)
-    poly(d, para(0, 0, w, h, 12), (*PANEL, 255))
-    poly(d, para(10, 0, w - 10, 2, 0.4), (*ORANGE, 255))
-    poly(d, para(0, h - 2, w - 12, 2, 0.4), (*EDGE, 255))
+    poly(d, [(0, 0), (w, 0), (w - 12, h), (0, h)], (*PANEL, 235))
+    poly(d, [(0, 0), (w, 0), (w - 0.4, 1.6), (0, 1.6)], (*ORANGE, 255))
+    poly(d, [(w - 1.6, 0), (w, 0), (w - 12, h), (w - 13.6, h)], (*EDGE, 255))
+    for k in range(rows):  # faint row guides
+        y = 13 + k * MENU_STEP
+        poly(d, [(8, y), (w - 20 - k * 0.8, y), (w - 20.4 - k * 0.8, y + 0.5), (8, y + 0.5)], (*EDGE, 70))
+    return done(c)
+
+
+def focus_panel():
+    w, h = FOCUS_W, FOCUS_H
+    c = canvas(w, h)
+    d = ImageDraw.Draw(c)
+    poly(d, para(0, 0, w, h, 14), (*NAVY, 235))
+    poly(d, para(13, 0, w - 13, 1.6, 0.2), (*EDGE, 255))
+    poly(d, para(0, h - 1.6, w - 14, 1.6, 0.2), (*EDGE, 255))
+    poly(d, para(20, 10, 44, 12, 2.4), (*ORANGE, 255))  # "MODE" tag
+    poly(d, para(18, 48, w - 34, 0.8, 0.1), (*EDGE, 255))  # rule under the mode name
+    img = done(c)
+    tag = text("MODE", 7, fill=NAVY, outline=None, ow=0, stroke=1.5)
+    img.paste(tag, (px(42) - tag.size[0] // 2, px(12.5)), tag)
+    return img
+
+
+def menu_cursor(flash):
+    """Selected-item plate: orange slab with a notch on the left; flash = the frame shown on change."""
+    w, h = 136, 14
+    c = canvas(w + 8, h)
+    d = ImageDraw.Draw(c)
+    body = (255, 236, 190) if flash else ORANGE
+    poly(d, para(8, 0, w, h, 5), (*body, 255))
+    poly(d, para(8 + w - 30, 0, 24, h, 5), (*YELLOW, 255))  # bright tail
+    poly(d, [(0, 2), (4, 2), (6, h / 2), (4, h - 2), (0, h - 2), (2, h / 2)], (*WHITE, 255))  # chevron
+    return done(c)
+
+
+def button_icon(kind):
+    """Vita face-button glyphs for the hint bar, drawn from shapes (cross, circle, d-pad)."""
+    s = 9
+    c = canvas(s, s)
+    d = ImageDraw.Draw(c)
+    d.ellipse([0, 0, px(s) * SS - 1, px(s) * SS - 1], fill=(*EDGE, 255))
+    m = px(1) * SS
+    d.ellipse([m, m, px(s) * SS - 1 - m, px(s) * SS - 1 - m], fill=(*PANEL2, 255))
+    col = {"cross": (120, 170, 255), "circle": (255, 90, 110), "dpad": (220, 225, 240)}[kind]
+    if kind == "cross":
+        poly(d, [(2.6, 3.2), (3.2, 2.6), (6.4, 5.8), (5.8, 6.4)], (*col, 255))
+        poly(d, [(5.8, 2.6), (6.4, 3.2), (3.2, 6.4), (2.6, 5.8)], (*col, 255))
+    elif kind == "circle":
+        r = px(1.9) * SS
+        cx = px(4.5) * SS
+        d.ellipse([cx - r, cx - r, cx + r, cx + r], outline=(*col, 255), width=max(1, px(0.8) * SS))
+    else:
+        poly(d, [(3.8, 1.8), (5.2, 1.8), (5.2, 7.2), (3.8, 7.2)], (*col, 255))
+        poly(d, [(1.8, 3.8), (7.2, 3.8), (7.2, 5.2), (1.8, 5.2)], (*col, 255))
+    return done(c)
+
+
+def hint_bar(hints):
+    """Bottom bar: [(icon, label), ...] right-aligned. Static art, the controls never change here."""
+    w, h = 320, 240 - HINT_Y
+    c = canvas(w, h)
+    d = ImageDraw.Draw(c)
+    poly(d, [(0, 0), (w, 0), (w, h), (0, h)], (5, 7, 16, 230))
+    poly(d, [(0, 0), (w, 0), (w, 0.8), (0, 0.8)], (*EDGE, 255))
+    img = done(c)
+    x = px(w - 12)
+    y = px(h / 2)
+    for icon, label in reversed(hints):
+        t = text(label, 6, fill=(200, 210, 230), outline=None, ow=0, stroke=1.3)
+        x -= t.size[0]
+        img.paste(t, (x, y - t.size[1] // 2), t)
+        ic = button_icon(icon)
+        x -= ic.size[0] + px(3)
+        img.paste(ic, (x, y - ic.size[1] // 2), ic)
+        x -= px(12)
+    return img
+
+
+def light_sweep():
+    """Diagonal additive light band that crosses the screen now and then (the occasional accent)."""
+    w, h = 60, 240
+    c = canvas(w, h, (0, 0, 0, 255))
+    d = ImageDraw.Draw(c)
+    for k, a in ((0, 30), (8, 60), (16, 90), (22, 60), (30, 30)):
+        poly(d, [(26 + k, 0), (34 + k, 0), (8 + k - 22, h), (0 + k - 22, h)], (a, int(a * 0.55), int(a * 0.2), 255))
+    return done(c)
+
+
+def embers(w=160, h=240, n=26, seed=3):
+    """Sparse warm dots for a slow upward drift (tiled vertically by the BG layer)."""
+    import random
+    rnd = random.Random(seed)
+    c = canvas(w, h, (0, 0, 0, 255))
+    d = ImageDraw.Draw(c)
+    for _ in range(n):
+        x, y, r = rnd.uniform(4, w - 4), rnd.uniform(0, h), rnd.uniform(0.5, 1.1)
+        k = rnd.uniform(0.35, 0.9)
+        poly(d, [(x, y - r), (x + r, y), (x, y + r), (x - r, y)], (int(255 * k), int(140 * k), int(40 * k), 255))
     return done(c)
 
 
@@ -465,10 +574,16 @@ def vs_logo(flash=False):
 def system_sprites(grid):
     s = []
     s.append(spr(backdrop(), 0, 0, 1000, 0))
-    s.append(spr(speed_lines(320, 240, (255, 140, 40)), 0, 0, 1001, 0))
-    lg = logo()
-    s.append(spr(lg, lg.size[0] // 2, 0, 1002, 0))
-    s.append(spr(menu_panel(), px(85), 0, 1003, 0))
+    s.append(spr(speed_lines(320, 240, (150, 80, 24)), 0, 0, 1001, 0))
+    s.append(spr(logo(16), 0, 0, 1002, 0))
+    s.append(spr(list_panel(len(MENU_ITEMS)), 0, 0, 1004, 0))
+    s.append(spr(focus_panel(), 0, 0, 1005, 0))
+    s.append(spr(hint_bar([("dpad", "MOVE"), ("cross", "SELECT")]), 0, 0, 1006, 0))
+    s.append(spr(light_sweep(), px(30), 0, 1007, 0))
+    s.append(spr(Image.new("RGBA", (1, 1), (0, 0, 0, 0)), 0, 0, 1007, 1))  # blank frame between sweeps
+    s.append(spr(embers(), 0, 0, 1008, 0))
+    s.append(spr(menu_cursor(False), px(14), px(12), 1300, 0))
+    s.append(spr(menu_cursor(True), px(14), px(12), 1300, 1))
     # select
     s.append(spr(backdrop(), 0, 0, 1100, 0))
     s.append(spr(grid_panel(grid["cols"] * 29 + 8, grid["rows"] * 29 + 8), 0, 0, 1101, 0))
@@ -506,11 +621,36 @@ def bg(name, **kv):
     return f"[{name}]\n" + "".join(f"{k} = {v}\n" for k, v in kv.items()) + "\n"
 
 
+# Main menu: what each mode really does. The engine adds items in a fixed order. Not listed:
+#   netplay  Windows-only in the engine (titlescreen.cpp:415)
+#   versus   the Vita build reads one pad and gives player 2 no input at all (prism
+#            vita/input_vita.cpp: every evaluateVitaButton* returns 0 for i != 0), so player 2
+#            can never pick a fighter; restore it once two-pad input exists
+MENU_ITEMS = [
+    ("arcade", "ARCADE", "Fight a ladder of CPU opponents, one match after another."),
+    ("freeplay", "FREE PLAY", "Pick your fighter, the opponent and the stage, then fight the CPU."),
+    ("survival", "SURVIVAL", "One health bar against an endless line of CPU fighters."),
+    ("training", "TRAINING", "Practise moves and combos against a dummy, with no timer."),
+    ("watch", "WATCH", "Pick two fighters and a stage, then watch the CPU fight."),
+    ("options", "OPTIONS", "Difficulty, life, time limit, game speed, volume and buttons."),
+    ("credits", "CREDITS", "The authors behind every fighter and stage."),
+    ("exit", "EXIT", "Close the game."),
+]
+HIDDEN_ITEMS = ["versus", "netplay", "teamarcade", "teamversus", "teamcoop", "survivalcoop", "story", "osu"]
+
 TITLE_BG = (bg("TitleBGdef", bgclearcolor="0,0,0")
             + bg("TitleBG 0", type="normal", spriteno="1000,0", start="-160,0")
-            + bg("TitleBG 1", type="normal", spriteno="1001,0", start="-160,0", tile="1,0", velocity="-3,0", trans="add")
-            + bg("TitleBG 2", type="normal", spriteno="1002,0", start="0,34")
-            + bg("TitleBG 3", type="normal", spriteno="1003,0", start="0,136"))
+            # slow base movement, an occasional light sweep, embers drifting up behind the focus panel
+            + bg("TitleBG 1", type="normal", spriteno="1001,0", start="-160,0", tile="1,0", velocity="-0.6,0", trans="add")
+            + bg("TitleBG 2", type="anim", actionno="1310", start="0,0", trans="add")
+            + bg("TitleBG 3", type="normal", spriteno="1008,0", start="0,0", tile="0,1", velocity="0,-0.25", trans="add")
+            + bg("TitleBG 4", type="normal", spriteno="1004,0", start=f"-160,{MENU_Y - 24}")
+            + bg("TitleBG 5", type="normal", spriteno="1005,0", start=f"{FOCUS_X - 160},{FOCUS_Y}")
+            + bg("TitleBG 6", type="normal", spriteno="1002,0", start="-146,12")
+            + bg("TitleBG 7", type="normal", spriteno="1006,0", start=f"-160,{HINT_Y}")
+            + "[Begin Action 1300]\n1300,1, 0,0, 3\n1300,0, 0,0, -1\n\n"  # menu cursor: flash on change, then hold
+            + "[Begin Action 1310]\n" + "".join(f"1007,0, {x},0, 2\n" for x in range(-240, 241, 24))
+            + "1007,1, 0,0, 330\n\n")  # a ~0.7 s sweep every ~6 s
 SELECT_BG = (bg("SelectBGdef", bgclearcolor="0,0,0")
              + bg("SelectBG 0", type="normal", spriteno="1100,0", start="-160,0")
              + bg("SelectBG 1", type="normal", spriteno="1103,0", start="-152,20")
@@ -519,6 +659,9 @@ SELECT_BG = (bg("SelectBGdef", bgclearcolor="0,0,0")
              + bg("SelectBG 4", type="normal", spriteno="1106,0", start="30,121")
              + bg("SelectBG 5", type="normal", spriteno="1101,0", start="{gx},{gy}")
              + bg("SelectBG 6", type="normal", spriteno="1102,0", start="-160,0"))
+OPTION_BG = (bg("OptionBGdef", bgclearcolor="0,0,0")
+              + bg("OptionBG 0", type="normal", spriteno="1000,0", start="-160,0")
+              + bg("OptionBG 1", type="normal", spriteno="1001,0", start="-160,0", tile="1,0", velocity="-0.6,0", trans="add"))
 VS_BG = (bg("VersusBGdef", bgclearcolor="0,0,0")
          + bg("VersusBG 0", type="normal", spriteno="1200,0", start="-160,0")
          + bg("VersusBG 1", type="normal", spriteno="1201,0", start="-142,29")
@@ -531,20 +674,35 @@ VS_BG = (bg("VersusBGdef", bgclearcolor="0,0,0")
          + "200,0, 0,0, -1\n\n")
 
 SYSTEM_KEYS = {
-    "files": {"font1": "font/jfv_s.fnt", "font2": "font/jfv_m.fnt", "font3": "font/jfv_m.fnt", "font4": "font/jfv_mhi.fnt",
-              "font5": "font/jfv_l.fnt", "font6": "font/jfv_m1.fnt", "font7": "font/jfv_mhi1.fnt"},  # 6, 7: 1x (make_fonts)
-    "title info": {"menu.pos": "160,154", "menu.item.font": "3,0,0", "menu.item.active.font": "4,0,0",
-                   "menu.item.spacing": "0,14", "menu.boxcursor.coords": "-62,-13,61,1",
-                   # outside 320 space the engine shows one extra item (titlescreen.cpp:261): the
-                   # bottom margin takes it back (tuned by screenshot)
-                   "menu.window.margins.y": "14,0", "menu.window.visibleitems": "5"},
+    # 1x fonts (make_fonts): 2 (the options screen draws font 2 unscaled, optionsscreen.cpp:846), 6, 7
+    "files": {"font1": "font/jfv_s.fnt", "font2": "font/jfv_s1.fnt", "font3": "font/jfv_mdim.fnt", "font4": "font/jfv_mhi.fnt",
+              "font5": "font/jfv_l.fnt", "font6": "font/jfv_m1.fnt", "font7": "font/jfv_mhi1.fnt",
+              "font8": "font/jfv_h.fnt", "font9": "font/jfv_sd.fnt", "font10": "font/jfv_m.fnt"},
+    "title info": dict(
+        {"menu.pos": f"{MENU_X},{MENU_Y}", "menu.item.font": "3,0,1", "menu.item.active.font": "10,0,1",
+         "menu.item.spacing": f"0,{MENU_STEP}", "menu.window.visibleitems": str(len(MENU_ITEMS)),
+         "menu.window.margins.y": "20,20",
+         "menu.boxcursor.coords": "-8,-12,128,2",  # stock engines only; patch 0009 draws menu.cursor.anim
+         # patch 0009 (engine): eased cursor and active slide, focus name and description
+         "menu.ease": "0.35", "menu.item.active.offset": "6,0", "menu.cursor.anim": "1300", "menu.cursor.offset": "0,0",
+         "menu.focus.pos": f"{FOCUS_X + 18},{FOCUS_Y + 42}", "menu.focus.font": "8,0,1", "menu.focus.offset": "12,0",
+         "menu.desc.pos": f"{FOCUS_X + 18},{FOCUS_Y + 64}", "menu.desc.font": "9,0,1", "menu.desc.width": f"{FOCUS_W - 26}"},
+        **{f"menu.itemname.{k}": f'"{name}"' for k, name, _ in MENU_ITEMS},
+        **{f"menu.itemdesc.{k}": f'"{desc}"' for k, _, desc in MENU_ITEMS},
+        **{f"menu.itemname.{k}": '""' for k in HIDDEN_ITEMS}),
     "select info": {"title.offset": "160,15", "title.font": "7,0,0",
                     "p1.face.offset": "20,22", "p2.face.offset": "299,22",
                     "p1.face.scale": "0.75,0.75", "p2.face.scale": "0.75,0.75",
+                    # patch 0009: portraits bounded to their cell / slab, cursors glide between cells
+                    "portrait.fit": "1", "p1.face.window": "112,106", "p2.face.window": "112,106", "cursor.ease": "0.4",
                     "p1.name.offset": "16,131", "p1.name.font": "6,0,1",
                     "p2.name.offset": "304,131", "p2.name.font": "6,0,-1",
                     "stage.pos": "160,40", "stage.active.font": "7,0,0", "stage.active2.font": "6,0,0",
-                    "stage.done.font": "7,0,0"},
+                    "stage.done.font": "7,0,0",
+                    # credits mode: drawn unscaled (1x font 2), in the P2 slab, which credits leaves empty
+                    "credits.position": "190,44", "credits.name.offset": "0,0", "credits.name.font": "2,0,1",
+                    "credits.author.offset": "0,12", "credits.author.font": "2,0,1",
+                    "credits.versiondate.offset": "0,24", "credits.versiondate.font": "2,0,1"},
     "vs screen": {"p1.scale": f"{K},{K}", "p2.scale": f"{K},{K}",  # scaled by 320/640 like a position
                   "p1.pos": "20,31", "p2.pos": "299,31", "p1.name.pos": "80,192", "p1.name.font": "1,0,0",
                   "p2.name.pos": "240,192", "p2.name.font": "1,0,0"},
@@ -589,7 +747,7 @@ def replace_sections(text, prefix, new):
     return text2[:pos] + new + text2[pos:]
 
 
-COORD_KEY = re.compile(r"(^|\.)(pos|offset|iconoffset|spacing|range\.x|range|window|margins(\.y)?|coords|size|start|start\.x|velocity)$", re.I)
+COORD_KEY = re.compile(r"(^|\.)(pos|position|offset|iconoffset|spacing|range\.x|range|window|width|margins(\.y)?|coords|size|start|start\.x|velocity)$", re.I)
 FRAME = re.compile(r"^(\s*-?\d+\s*,\s*-?\d+\s*,\s*)(-?[\d.]+)(\s*,\s*)(-?[\d.]+)(\s*,.*)$")
 
 
@@ -646,6 +804,7 @@ def build_system(stock):
     g = grid_of(stock)
     t = replace_sections(t, "SelectBG", SELECT_BG.replace("{gx},{gy}", f"{g['x'] - 5 - 160},{g['y'] - 5}"))
     t = replace_sections(t, "VersusBG", VS_BG)
+    t = replace_sections(t, "OptionBG", OPTION_BG)
     t = to_k_space(t)
     t = set_keys(t, "select info", {"title.offset": SYSTEM_KEYS["select info"]["title.offset"]})  # read untransformed (characterselectscreen.cpp:471)
     return set_keys(t, "info", {"localcoord": f"{320 * K},{240 * K}"})

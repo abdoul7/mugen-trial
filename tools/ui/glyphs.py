@@ -158,6 +158,10 @@ def write_fnt(path, cap, fill=(255, 255, 255), outline=(0, 0, 0), ow=1, digits_o
     if not (len(pcx) > 769 and pcx[-769] == 0x0C):
         pcx += b"\x0c" + bytes(spr.image.getpalette()[:768])
     space = max(2, int(cap * SPACE / 6))
+    if not digits_only:
+        # each glyph's box includes its italic slant (cap * ITALIC px) and boxes never overlap, so
+        # without this every letter gets a quarter-em of extra air: tuck most of the slant back in
+        gap -= int(round(cap * ITALIC * 0.7))
     lines = ["[Def]", f"Size = {space},{h}", f"Spacing = {gap},0", "Colors = 255", "Offset = 0,0", "Type = Variable", "", "[Map]"]
     for c, sx, w in mapping:
         lines.append(f"{c} {sx} {w}")
