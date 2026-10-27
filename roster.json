@@ -6,77 +6,6 @@
   "arcade_maxmatches": "6,1,1,0,0,0,0,0,0,0",
   "characters": [
     {
-      "id": "kfm",
-      "source": "stock",
-      "def": "kfm",
-      "stage": {
-        "source": "stock",
-        "def": "stages/kfm.def"
-      }
-    },
-    {
-      "id": "pupa",
-      "folder": "Rage of The Dragons/Pupa",
-      "def": "Pupa.def",
-      "localcoord": null,
-      "stage": {
-        "id": "rschool",
-        "def": "RageofTheDragons/Rschool.def",
-        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
-      }
-    },
-    {
-      "id": "bender",
-      "folder": "Cartoon/bender",
-      "def": "bender.def",
-      "localcoord": null,
-      "stage": {
-        "id": "ship",
-        "def": "Cartoon/ship.def",
-        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
-      },
-      "snd_rate": 16000
-    },
-    {
-      "id": "lucario",
-      "folder": "Pokemon/Lucario_M",
-      "def": "Lucario_M.def",
-      "localcoord": null,
-      "stage": {
-        "id": "snorlax",
-        "def": "Pokemon/Snorlax.def",
-        "music": "Sound/Pokemon/47. Poke Flute.mp3"
-      },
-      "copy_files": [
-        [
-          "Data/common2.cns",
-          "common2.cns"
-        ]
-      ]
-    },
-    {
-      "id": "goenitz",
-      "folder": "KOF/Goenitz",
-      "def": "Goenitz.def",
-      "localcoord": null,
-      "stage": {
-        "id": "kof96goe",
-        "def": "KOF/96/KOF96_Goenitz_Stage.def",
-        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
-      }
-    },
-    {
-      "id": "gouken",
-      "folder": "Street Fighter/gouken",
-      "def": "gouken.def",
-      "localcoord": null,
-      "stage": {
-        "id": "sfa3akuma",
-        "def": "StreetFighter/sfa3akuma.def",
-        "music": "Sound/StreetFighter/akumasfa3.mp3"
-      }
-    },
-    {
       "id": "janemba",
       "folder": "Dragonball/janemba",
       "def": "janemba.def",
@@ -156,17 +85,6 @@
       "stage": {
         "source": "stock",
         "def": "stages/snorlax.def"
-      }
-    },
-    {
-      "id": "garou_hunters",
-      "root": "source/jf",
-      "folder": "garou_hunters/Garou-Hunters",
-      "def": "Garou-Hunters.def",
-      "source_note": "AK1 download (Garou-Hunters.rar), triage TEST: 7x trans=sub (not implemented on Vita: some effects will look wrong)",
-      "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
       }
     },
     {
@@ -349,17 +267,6 @@
       "stage": {
         "source": "stock",
         "def": "stages/sfa3akuma.def"
-      }
-    },
-    {
-      "id": "rare_akuma",
-      "root": "source/jf",
-      "folder": "rareakuma",
-      "def": "RareAkuma.def",
-      "source_note": "AK1 download (RareAkuma.zip), batch 2 (Issa). tools/vita_mem.py: ~14 MB textures per fighter.",
-      "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
       }
     },
     {
@@ -672,6 +579,131 @@
         },
         "sprite_cap": 256,
         "snd_rate": 16000
+      }
+    },
+    {
+      "id": "kfm",
+      "reason": "Roster review (reports/char-review.csv): engine mascot; smallest move set (49 states, 3 supers). Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "kfm",
+        "source": "stock",
+        "def": "kfm",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kfm.def"
+        }
+      }
+    },
+    {
+      "id": "pupa",
+      "reason": "Roster review (reports/char-review.csv): demo character; missing KO/win/intro animations, no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "pupa",
+        "folder": "Rage of The Dragons/Pupa",
+        "def": "Pupa.def",
+        "localcoord": null,
+        "stage": {
+          "id": "rschool",
+          "def": "RageofTheDragons/Rschool.def",
+          "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+        }
+      }
+    },
+    {
+      "id": "bender",
+      "reason": "Roster review (reports/char-review.csv): demo character (Futurama); no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "bender",
+        "folder": "Cartoon/bender",
+        "def": "bender.def",
+        "localcoord": null,
+        "stage": {
+          "id": "ship",
+          "def": "Cartoon/ship.def",
+          "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+        },
+        "snd_rate": 16000
+      }
+    },
+    {
+      "id": "lucario",
+      "reason": "Roster review (reports/char-review.csv): demo character; no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "lucario",
+        "folder": "Pokemon/Lucario_M",
+        "def": "Lucario_M.def",
+        "localcoord": null,
+        "stage": {
+          "id": "snorlax",
+          "def": "Pokemon/Snorlax.def",
+          "music": "Sound/Pokemon/47. Poke Flute.mp3"
+        },
+        "copy_files": [
+          [
+            "Data/common2.cns",
+            "common2.cns"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "goenitz",
+      "reason": "Roster review (reports/char-review.csv): demo character (KOF); not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "goenitz",
+        "folder": "KOF/Goenitz",
+        "def": "Goenitz.def",
+        "localcoord": null,
+        "stage": {
+          "id": "kof96goe",
+          "def": "KOF/96/KOF96_Goenitz_Stage.def",
+          "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
+        }
+      }
+    },
+    {
+      "id": "gouken",
+      "reason": "Roster review (reports/char-review.csv): demo character (SF); not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "gouken",
+        "folder": "Street Fighter/gouken",
+        "def": "gouken.def",
+        "localcoord": null,
+        "stage": {
+          "id": "sfa3akuma",
+          "def": "StreetFighter/sfa3akuma.def",
+          "music": "Sound/StreetFighter/akumasfa3.mp3"
+        }
+      }
+    },
+    {
+      "id": "garou_hunters",
+      "reason": "Roster review (reports/char-review.csv): very small sprite set (220 images); thin next to the rest. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "garou_hunters",
+        "root": "source/jf",
+        "folder": "garou_hunters/Garou-Hunters",
+        "def": "Garou-Hunters.def",
+        "source_note": "AK1 download (Garou-Hunters.rar), triage TEST: 7x trans=sub (not implemented on Vita: some effects will look wrong)",
+        "stage": {
+          "source": "stock",
+          "def": "stages/ship.def"
+        }
+      }
+    },
+    {
+      "id": "rare_akuma",
+      "reason": "Roster review (reports/char-review.csv): SF character; not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "rare_akuma",
+        "root": "source/jf",
+        "folder": "rareakuma",
+        "def": "RareAkuma.def",
+        "source_note": "AK1 download (RareAkuma.zip), batch 2 (Issa). tools/vita_mem.py: ~14 MB textures per fighter.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kof96goe.def"
+        }
       }
     }
   ]
