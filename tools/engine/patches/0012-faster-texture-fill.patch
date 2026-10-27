@@ -1,0 +1,89 @@
+diff --git a/prism/vita/texture_vita.cpp b/prism/vita/texture_vita.cpp
+index 4c65833..2b3dd4b 100644
+--- a/prism/vita/texture_vita.cpp
++++ b/prism/vita/texture_vita.cpp
+@@ -208,10 +208,11 @@ namespace prism {
+ 
+ 	static void freeUnusedVita2dPalette(vita2d_texture* tTexture);
+ 
+-	static vita2d_texture* createVitaTextureFromSlab(int tWidth, int tHeight, SceGxmTextureFormat tFormat);
++	static vita2d_texture* createVitaTextureFromSlab(int tWidth, int tHeight, SceGxmTextureFormat tFormat, int tIsCleared);
+ 
+-	static vita2d_texture* createVitaTextureOrAbort(int tWidth, int tHeight, SceGxmTextureFormat tFormat) {
+-		auto ret = createVitaTextureFromSlab(tWidth, tHeight, tFormat);
++	// [JFV] patch 0012: tIsCleared = 0 for textures the caller overwrites completely (it must clear the stride padding)
++	static vita2d_texture* createVitaTextureOrAbort(int tWidth, int tHeight, SceGxmTextureFormat tFormat, int tIsCleared = 1) {
++		auto ret = createVitaTextureFromSlab(tWidth, tHeight, tFormat, tIsCleared);
+ 		if (!ret) {
+ 			logErrorFormat("[Texture] Out of Vita texture memory creating %dx%d texture (format %d) after %d textures.", tWidth, tHeight, (int)tFormat, gPrismVitaTextureData.mCreatedTextureAmount);
+ 			abortSystem();
+@@ -267,7 +268,7 @@ namespace prism {
+ 	// sceGxmTextureInitLinear rejects dimensions above this and leaves the texture unusable, so don't try to allocate them
+ 	static const int VITA_MAXIMUM_TEXTURE_DIMENSION = 4096;
+ 
+-	static vita2d_texture* createVitaTextureFromSlab(int tWidth, int tHeight, SceGxmTextureFormat tFormat) {
++	static vita2d_texture* createVitaTextureFromSlab(int tWidth, int tHeight, SceGxmTextureFormat tFormat, int tIsCleared) {
+ 		if (tWidth > VITA_MAXIMUM_TEXTURE_DIMENSION || tHeight > VITA_MAXIMUM_TEXTURE_DIMENSION) return NULL;
+ 
+ 		const uint32_t stride = (uint32_t(tWidth) + 7) & ~7u;
+@@ -277,7 +278,7 @@ namespace prism {
+ 
+ 		auto ret = (vita2d_texture*)malloc(sizeof(vita2d_texture));
+ 		if (!ret) return NULL;
+-		memset(data, 0, textureSize);
++		if (tIsCleared) memset(data, 0, textureSize);
+ 		sceGxmTextureInitLinear(&ret->gxm_tex, data, tFormat, tWidth, tHeight, 0);
+ 		ret->data_UID = 0;
+ 		ret->palette_UID = 0;
+@@ -368,16 +369,29 @@ namespace prism {
+ 		auto textureStride = vita2d_texture_get_stride(tTexture);
+ 		const int physicalWidth = (tWidth + k - 1) / k;
+ 		const int physicalHeight = (tHeight + k - 1) / k;
++		// [JFV] patch 0012: the texture is created without the full memset, so clear only the row padding
++		const size_t rowBytes = size_t(physicalWidth) * tBytesPerPixel;
++		const size_t paddingBytes = size_t(textureStride) > rowBytes ? size_t(textureStride) - rowBytes : 0;
+ 		for (int y = 0; y < physicalHeight; y++) {
+ 			const uint8_t* sourceRow = tSource + size_t(y) * k * tWidth * tBytesPerPixel;
+ 			uint8_t* targetRow = data + size_t(textureStride) * y;
+ 			if (k == 1) {
+-				memcpy(targetRow, sourceRow, size_t(tWidth) * tBytesPerPixel);
+-				continue;
++				memcpy(targetRow, sourceRow, rowBytes);
+ 			}
+-			for (int x = 0; x < physicalWidth; x++) {
+-				memcpy(targetRow + x * tBytesPerPixel, sourceRow + size_t(x) * k * tBytesPerPixel, tBytesPerPixel);
++			else if (tBytesPerPixel == 1) {
++				for (int x = 0; x < physicalWidth; x++) targetRow[x] = sourceRow[size_t(x) * k];
+ 			}
++			else if (tBytesPerPixel == 4) {
++				const uint32_t* source32 = (const uint32_t*)sourceRow;
++				uint32_t* target32 = (uint32_t*)targetRow;
++				for (int x = 0; x < physicalWidth; x++) target32[x] = source32[size_t(x) * k];
++			}
++			else {
++				for (int x = 0; x < physicalWidth; x++) {
++					memcpy(targetRow + x * tBytesPerPixel, sourceRow + size_t(x) * k * tBytesPerPixel, tBytesPerPixel);
++				}
++			}
++			if (paddingBytes) memset(targetRow + rowBytes, 0, paddingBytes);
+ 		}
+ 	}
+ 
+@@ -389,7 +403,7 @@ namespace prism {
+ 		returnData.mHasPalette = 0;
+ 		Texture texture = (Texture)returnData.mTexture->mData;
+ 		const int k = getVitaTextureDownscaleFactor(tWidth, tHeight);
+-		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_A8R8G8B8);
++		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_A8R8G8B8, 0);
+ 		copyImageIntoVitaTexture(texture->mTexture, (const uint8_t*)b.mData, tWidth, tHeight, 4, k);
+ 
+ 		texture->mTexture->palette_UID = 0;
+@@ -426,7 +440,7 @@ namespace prism {
+ 		returnData.mPaletteID = tPaletteID;
+ 		Texture texture = (Texture)returnData.mTexture->mData;
+ 		const int k = getVitaTextureDownscaleFactor(tWidth, tHeight);
+-		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_P8_RGBA);
++		texture->mTexture = createVitaTextureOrAbort((tWidth + k - 1) / k, (tHeight + k - 1) / k, SCE_GXM_TEXTURE_FORMAT_P8_RGBA, 0);
+ 		copyImageIntoVitaTexture(texture->mTexture, (const uint8_t*)b.mData, tWidth, tHeight, 1, k);
+ 		
+ 		texture->mTexture->palette_UID = 0;

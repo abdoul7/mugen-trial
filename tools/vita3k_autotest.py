@@ -131,7 +131,8 @@ def main():
     si.wShowWindow = 4  # SW_SHOWNOACTIVATE: doesn't take focus (minimized would stop Vulkan rendering)
     start = time.time()
     p = subprocess.Popen([VITA3K, "--frontend", "sdl", "-r", "JFVT00001"], cwd=os.path.dirname(VITA3K),
-                         startupinfo=si, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         startupinfo=si, stdout=open(os.path.join(ROOT, "reports", "vita3k", "autotest-vita3k.log"), "w"),
+                         stderr=subprocess.STDOUT)
     hide_window(p.pid)
     loaded_at = None
     log = ""

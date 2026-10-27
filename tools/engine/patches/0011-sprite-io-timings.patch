@@ -1,0 +1,122 @@
+diff --git a/prism/filereader.cpp b/prism/filereader.cpp
+index 2376640..f402fde 100644
+--- a/prism/filereader.cpp
++++ b/prism/filereader.cpp
+@@ -1,3 +1,4 @@
++#include <prism/system.h>
+ #include "prism/filereader.h"
+ 
+ #include "prism/memoryhandler.h"
+@@ -80,6 +81,10 @@ namespace prism {
+ 		int mIsOver;
+ 	} MugenSpriteFileFileReaderData;
+ 
++	// [JFV] patch 0011: file-reader calls and time spent in them (read by mugenspritefilereader)
++	uint64_t gJfvFileReaderTicks = 0;
++	uint32_t gJfvFileReaderCalls = 0;
++
+ 	static void initFileReader(FileReader* tReader, const char* tPath) {
+ 		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)allocMemory(sizeof(MugenSpriteFileFileReaderData));
+ 		data->mFile = fileOpen(tPath, O_RDONLY);
+@@ -97,13 +102,19 @@ namespace prism {
+ 	static void readFileReader(FileReader* tReader, void* tDst, uint32_t tSize) {
+ 		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+ 
++		const uint64_t t0 = getSystemTicks();
+ 		fileRead(data->mFile, tDst, tSize);
++		gJfvFileReaderTicks += getSystemTicks() - t0;
++		gJfvFileReaderCalls++;
+ 	}
+ 
+ 	static void seekFileReader(FileReader* tReader, uint32_t tPosition) {
+ 		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+ 
++		const uint64_t t0 = getSystemTicks();
+ 		fileSeek(data->mFile, tPosition, SEEK_SET);
++		gJfvFileReaderTicks += getSystemTicks() - t0;
++		gJfvFileReaderCalls++;
+ 		uint32_t position = tReader->mGetCurrentOffset(tReader);
+ 
+ 		if (position >= data->mFileSize) {
+@@ -125,7 +136,11 @@ namespace prism {
+ 	static uint32_t getCurrentFileReaderOffset(FileReader* tReader) {
+ 		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+ 
+-		return (uint32_t)fileTell(data->mFile);
++		const uint64_t t0 = getSystemTicks();
++		const uint32_t ret = (uint32_t)fileTell(data->mFile);
++		gJfvFileReaderTicks += getSystemTicks() - t0;
++		gJfvFileReaderCalls++;
++		return ret;
+ 	}
+ 
+ 	static void setFileReaderOver(FileReader* tReader) {
+diff --git a/prism/mugenspritefilereader.cpp b/prism/mugenspritefilereader.cpp
+index 0974a44..a8b4c8a 100644
+--- a/prism/mugenspritefilereader.cpp
++++ b/prism/mugenspritefilereader.cpp
+@@ -734,9 +734,15 @@ static Buffer loadBufferFromRawPNGBuffer(const Buffer& tRawPNGBuffer, int tWidth
+ 	return ret;
+ }
+ 
++// [JFV] patch 0011: where sprite loading time goes (debug log)
++static uint64_t gJfvDecodeTicks, gJfvPaletteTicks, gJfvSplitTicks, gJfvTextureTicks;
++
+ static MugenSpriteFileSprite makeMugenSpriteFileSpriteFromRawAndPaletteBufferGeneral(Buffer& tRawImageBuffer, const Buffer& tPaletteBuffer, int tIsUsingPaletteBuffer, int tWidth, int tHeight, int tBytesPerLine, const Vector2D& tAxisOffset) {
++	uint64_t jfvT = getSystemTicks();
+ 	auto subImageList = breakImageBufferUpIntoMultipleBuffers(tRawImageBuffer, tBytesPerLine, tWidth, tHeight, 1);
+ 	freeBuffer(tRawImageBuffer);
++	gJfvSplitTicks += getSystemTicks() - jfvT;
++	jfvT = getSystemTicks();
+ 
+ 	std::vector<MugenSpriteFileSubSprite> textures;
+ 	if (tIsUsingPaletteBuffer) {
+@@ -746,6 +752,7 @@ static MugenSpriteFileSprite makeMugenSpriteFileSpriteFromRawAndPaletteBufferGen
+ 		textures = loadTextureFromRawImageList1bpp(subImageList);
+ 	}
+ 	freeSubImageBufferList(subImageList);
++	gJfvTextureTicks += getSystemTicks() - jfvT;
+ 
+ 	return makeMugenSpriteFileSprite(textures, makeTextureSize(tWidth, tHeight), tAxisOffset);
+ }
+@@ -831,13 +838,17 @@ static MugenSpriteFileSprite loadTextureFromPCXBuffer(MugenSpriteFile* tDst, int
+ 		encodedSize = b.mLength - sizeof(PCXHeader);
+ 	}
+ 
++	uint64_t jfvT = getSystemTicks();
+ 	Buffer encodedImageBuffer = makeBuffer(p, encodedSize);
+ 	Buffer rawImageBuffer = decodeRLE5BufferAndReturnOwnedBuffer(encodedImageBuffer, pcxImageSize);
++	gJfvDecodeTicks += getSystemTicks() - jfvT;
++	jfvT = getSystemTicks();
+ 
+ 	if (mIsUsingOwnPalette) {
+ 		auto insertPalette = loadPCXPaletteToBuffer(p, encodedSize);
+ 		insertPaletteIntoMugenSpriteFile(tDst, insertPalette);
+ 	}
++	gJfvPaletteTicks += getSystemTicks() - jfvT;
+ 	assert(!tDst->mPalettes.empty());
+ 
+ 	if (gPrismMugenSpriteFileReaderData.mIsUsingRealPalette && tDst->mPalettes.size() == 1) {
+@@ -1454,6 +1465,11 @@ static MugenSpriteFile loadMugenSpriteFileGeneral(const char * tPath, int tHasPa
+ 
+ 	gPrismMugenSpriteFileReaderData.mHasPaletteFile = tHasPaletteFile;
+ 	checkMugenSpriteFileReader();
++	extern uint64_t gJfvFileReaderTicks; // [JFV] patch 0011
++	extern uint32_t gJfvFileReaderCalls;
++	const uint64_t jfvIo0 = gJfvFileReaderTicks, jfvStart = getSystemTicks();
++	gJfvDecodeTicks = gJfvPaletteTicks = gJfvSplitTicks = gJfvTextureTicks = 0;
++	const uint32_t jfvCalls0 = gJfvFileReaderCalls;
+ 
+ 	gPrismMugenSpriteFileReaderData.mReader.mInit(&gPrismMugenSpriteFileReaderData.mReader, tPath);
+ 
+@@ -1471,6 +1487,10 @@ static MugenSpriteFile loadMugenSpriteFileGeneral(const char * tPath, int tHasPa
+ 	else if (header.mVersion[1] == 0 && header.mVersion[3] == 100) {
+ 		ret = loadMugenSpriteFilePreloaded(tHasPaletteFile, tOptionalPaletteFile);
+ 	}
++	if (!gPrismMugenSpriteFileReaderData.mIsOnlyLoadingPortraits) {
++		logFormat("[JFV] sprites %s: %llu ms total, file reader %llu ms in %u calls; pcx decode %llu, palettes %llu, split %llu, textures %llu ms", tPath, (unsigned long long)((getSystemTicks() - jfvStart) / 1000), (unsigned long long)((gJfvFileReaderTicks - jfvIo0) / 1000), gJfvFileReaderCalls - jfvCalls0,
++			(unsigned long long)(gJfvDecodeTicks / 1000), (unsigned long long)(gJfvPaletteTicks / 1000), (unsigned long long)(gJfvSplitTicks / 1000), (unsigned long long)(gJfvTextureTicks / 1000));
++	}
+ 	else {
+ 		logError("Unrecognized SFF version.");
+ 		logErrorInteger(header.mVersion[0]);
