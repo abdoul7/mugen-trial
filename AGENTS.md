@@ -68,3 +68,30 @@ but run visibly slow there, and the Vita heap is 96 MB total.
 
 See `TODO.md`. Sourcing log: `reports/jf-sourcing.md`. Sourcing-agent prompt:
 `docs/hermes-sourcing-prompt.md`.
+
+## Legends mode — design/art handoff (2026-10-27)
+
+The owner requested a separate mode called **Legends**: three selected fighters,
+AI-driven combat and player coaching through randomly drawn cards. Read
+`docs/legends-design.md` and `docs/legends-claude-prompt.md` before implementing.
+Exactly four families: **Resolve, Secret Arts, Awakenings, Plot Twists**.
+Three-fighter squads must use successive 1v1 bouts; no engine teams/tag/simul.
+
+`tools/legends/catalog.json` contains twelve starter-card definitions, draw odds,
+conditions, timing, capability requirements and proposed balance values. This is
+design data, not implemented gameplay. `tools/build_legends_kit.py` builds the
+original Higgsfield card art/UI kit from recorded sources; source art stays in
+ignored `source/legends-art/`. `tools/validate_legends_kit.py` verifies asset/data
+integrity and atlas bounds, not combat behavior. Read `reports/legends-art.md`
+and `reports/legends-research.md` for provenance and limits.
+
+Highest-rarity cards must be full art with richer backgrounds. Rarity is separate
+from family. Preserve the detailed nostalgic arcade sprite aesthetic, not generic
+web-game blocks or smooth unrelated anime artwork. UI title/rules/status text
+remains native/dynamic. No card mode, coaching hooks, relay or time-stop effect is
+implemented by the design/art branch. Claude is tasked with native implementation.
+
+Work from `motif/legends-mode-design` for this handoff; ongoing menu/UI changes
+are a separate task (including UI handoff PR #7). Keep original modes unchanged,
+coordinate the engine and integration lanes, and never edit roster.json from
+this design lane. Asset files and previews are not committed to this public repo.

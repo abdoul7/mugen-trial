@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "content_version": "legends-starter-0.1",
+  "status": "Design data; native effect handlers are not implemented by this kit.",
+  "tick_rate": 60,
+  "families": {
+    "resolve": {"label": "Resolve", "color": "#67B2A2", "icon": "crest"},
+    "secret_arts": {"label": "Secret Arts", "color": "#E59A51", "icon": "slash"},
+    "awakenings": {"label": "Awakenings", "color": "#D15C65", "icon": "flame"},
+    "plot_twists": {"label": "Plot Twists", "color": "#AC93C6", "icon": "hourglass"}
+  },
+  "rarities": {
+    "common": {"label": "Common", "glyph": "C", "pips": 1, "draw_weight": 55, "art_treatment": "framed"},
+    "rare": {"label": "Rare", "glyph": "R", "pips": 2, "draw_weight": 30, "art_treatment": "expanded"},
+    "epic": {"label": "Epic", "glyph": "E", "pips": 3, "draw_weight": 12, "art_treatment": "extended"},
+    "legendary": {"label": "Legendary", "glyph": "L", "pips": 4, "draw_weight": 3, "art_treatment": "full_art"}
+  },
+  "rules": {
+    "hand_capacity": 3,
+    "opening_count": 3,
+    "opening_guaranteed_family": "resolve",
+    "opening_rarities": ["common", "rare"],
+    "hype_capacity": 900,
+    "hype_per_combat_tick": 1,
+    "hype_per_exchange": 60,
+    "hype_bonus_cap_per_60_ticks": 120,
+    "normal_draw_tickets_max": 1,
+    "bonus_draw_tickets_max": 2,
+    "all_draw_tickets_max": 3,
+    "global_play_cooldown_ticks": 90,
+    "legendary_draws_per_coach_encounter": 1,
+    "duplicate_ids_in_hand": false,
+    "fighter_count_per_squad": 3,
+    "active_fighters_per_side": 1,
+    "bout_time_seconds": 90
+  },
+  "cards": [
+    {
+      "id": "my_ninja_way", "revision": 1, "name": "MY NINJA WAY", "short_name": "NINJA WAY",
+      "reference": "Naruto / Naruto Uzumaki", "family": "resolve", "rarity": "common",
+      "short_text": "Keep the pressure. Guard less.",
+      "rules_text": "Equip: prefer close pressure and approach opportunities. Guard preference is slightly reduced. Replaces your active Resolve.",
+      "activation": "equip", "target": "own_active", "conditions": ["alive", "round_active", "not_time_locked"],
+      "required_capabilities": ["coach_profile", "approach_bias", "guard_bias"],
+      "reservation_ticks": 0, "windup_ticks": 0, "interruptible": false, "duration_ticks": null,
+      "effect": {"handler": "equip_profile", "profile": {"preferred_range": "close", "approach_weight_add": 0.25, "guard_probability_add": -0.08}},
+      "limits": {"resolve_slots_per_fighter": 1}, "art": {"sheet": "resolve", "panel": 0}
+    },
+    {
+      "id": "saiyan_pride", "revision": 1, "name": "SAIYAN PRIDE", "short_name": "PRIDE",
+      "reference": "Dragon Ball / Vegeta", "family": "resolve", "rarity": "rare",
+      "short_text": "Save power. Punish the opening.",
+      "rules_text": "Equip: reserve native power and prefer validated super opportunities against a punishable opponent. No free damage or guaranteed hit.",
+      "activation": "equip", "target": "own_active", "conditions": ["alive", "round_active", "not_time_locked"],
+      "required_capabilities": ["coach_profile", "native_power_reserve", "tagged_super", "observed_punish_window"],
+      "reservation_ticks": 0, "windup_ticks": 0, "interruptible": false, "duration_ticks": null,
+      "effect": {"handler": "equip_profile", "profile": {"native_power_reserve_fraction": 0.4, "confirmed_super_weight_add": 0.4}},
+      "limits": {"resolve_slots_per_fighter": 1}, "art": {"sheet": "resolve", "panel": 1}
+    },
+    {
+      "id": "scarlet_resolve", "revision": 1, "name": "SCARLET RESOLVE", "short_name": "SCARLET",
+      "reference": "Hunter x Hunter / Kurapika", "family": "resolve", "rarity": "epic",
+      "short_text": "Stay composed. Counter the whiff.",
+      "rules_text": "Equip: prefer safe spacing and counters after observed whiffs. Guard chance rises modestly, within the global clamp. No future-state knowledge.",
+      "activation": "equip", "target": "own_active", "conditions": ["alive", "round_active", "not_time_locked"],
+      "required_capabilities": ["coach_profile", "guard_bias", "tagged_counter", "observed_punish_window"],
+      "reservation_ticks": 0, "windup_ticks": 0, "interruptible": false, "duration_ticks": null,
+      "effect": {"handler": "equip_profile", "profile": {"preferred_range": "safe_poke", "counter_weight_add": 0.3, "guard_probability_add": 0.1}},
+      "limits": {"resolve_slots_per_fighter": 1}, "art": {"sheet": "resolve", "panel": 2}
+    },
+    {
+      "id": "chidori", "revision": 1, "name": "CHIDORI", "short_name": "CHIDORI",
+      "reference": "Naruto / Sasuke Uchiha", "family": "secret_arts", "rarity": "common",
+      "short_text": "A lightning rush. It can be blocked.",
+      "rules_text": "Arm for up to 1 second. At a legal grounded opening, commit a lightning-rush echo after a short interruptible windup. One hit; no homing.",
+      "activation": "legal_action", "target": "opponent_active", "conditions": ["alive", "round_active", "target_alive", "grounded", "control_or_validated_cancel", "not_time_locked"],
+      "required_capabilities": ["safe_action_window", "card_echo_attack"],
+      "reservation_ticks": 60, "windup_ticks": 10, "interruptible": true, "duration_ticks": 30,
+      "effect": {"handler": "spawn_echo", "echo": "lightning_rush", "base_damage_fraction": 0.06, "hit_limit": 1, "tracking": false},
+      "limits": {}, "art": {"sheet": "secret_arts", "panel": 0}
+    },
+    {
+      "id": "spirit_gun", "revision": 1, "name": "SPIRIT GUN", "short_name": "SPIRIT GUN",
+      "reference": "Yu Yu Hakusho / Yusuke Urameshi", "family": "secret_arts", "rarity": "common",
+      "short_text": "One shot. Pick your opening.",
+      "rules_text": "At a legal opening, fire a straight energy echo after an interruptible startup. One hit. It can be blocked or avoided.",
+      "activation": "legal_action", "target": "opponent_active", "conditions": ["alive", "round_active", "target_alive", "control_or_validated_cancel", "not_time_locked"],
+      "required_capabilities": ["safe_action_window", "card_echo_attack"],
+      "reservation_ticks": 60, "windup_ticks": 12, "interruptible": true, "duration_ticks": 90,
+      "effect": {"handler": "spawn_echo", "echo": "spirit_projectile", "base_damage_fraction": 0.05, "hit_limit": 1, "tracking": false},
+      "limits": {}, "art": {"sheet": "secret_arts", "panel": 1}
+    },
+    {
+      "id": "bungee_gum", "revision": 1, "name": "BUNGEE GUM", "short_name": "BUNGEE GUM",
+      "reference": "Hunter x Hunter / Hisoka", "family": "secret_arts", "rarity": "rare",
+      "short_text": "Land a tether. Control the gap.",
+      "rules_text": "Fire a tether echo. If its one hit connects, apply a short separation limit and a gentle pull. A miss or block creates no tether.",
+      "activation": "legal_action", "target": "opponent_active", "conditions": ["alive", "round_active", "target_alive", "control_or_validated_cancel", "not_time_locked"],
+      "required_capabilities": ["safe_action_window", "card_echo_attack", "safe_tether_force"],
+      "reservation_ticks": 60, "windup_ticks": 12, "interruptible": true, "duration_ticks": 90,
+      "effect": {"handler": "spawn_tether", "base_damage_fraction": 0.02, "hit_limit": 1, "tether_ticks": 90, "force_changes_state": false},
+      "limits": {}, "art": {"sheet": "secret_arts", "panel": 2}
+    },
+    {
+      "id": "kaio_ken", "revision": 1, "name": "KAIO-KEN", "short_name": "KAIO-KEN",
+      "reference": "Dragon Ball / Son Goku", "family": "awakenings", "rarity": "rare",
+      "short_text": "Push harder. Your body pays.",
+      "rules_text": "For 6 seconds: +20% attack and more approach pressure. Lose 1% max HP each second; this strain cannot KO you. Does not speed up animation frames.",
+      "activation": "buff", "target": "own_active", "conditions": ["alive", "round_active", "awakening_slot_empty", "not_time_locked"],
+      "required_capabilities": ["damage_modifier_registry", "coach_profile", "safe_nonlethal_strain"],
+      "reservation_ticks": 0, "windup_ticks": 6, "interruptible": false, "duration_ticks": 360,
+      "effect": {"handler": "apply_awakening", "attack_multiplier": 1.2, "approach_weight_add": 0.2, "strain_fraction_per_second": 0.01, "strain_can_ko": false},
+      "limits": {"awakening_slots_per_fighter": 1}, "art": {"sheet": "awakenings", "panel": 0}
+    },
+    {
+      "id": "bankai", "revision": 1, "name": "BANKAI", "short_name": "BANKAI",
+      "reference": "Bleach / Ichigo Kurosaki", "family": "awakenings", "rarity": "epic",
+      "short_text": "Release power. Keep the pressure.",
+      "rules_text": "For 6 seconds: +15% attack and +25% validated native power gain. Adds an aura; transformation is allowed only through a verified character adapter.",
+      "activation": "buff", "target": "own_active", "conditions": ["alive", "round_active", "awakening_slot_empty", "not_time_locked"],
+      "required_capabilities": ["damage_modifier_registry", "native_power_gain_modifier"],
+      "reservation_ticks": 0, "windup_ticks": 8, "interruptible": false, "duration_ticks": 360,
+      "effect": {"handler": "apply_awakening", "attack_multiplier": 1.15, "native_power_gain_multiplier": 1.25, "automatic_transformation": false},
+      "limits": {"awakening_slots_per_fighter": 1}, "art": {"sheet": "awakenings", "panel": 1}
+    },
+    {
+      "id": "plus_ultra", "revision": 1, "name": "PLUS ULTRA", "short_name": "PLUS ULTRA",
+      "reference": "My Hero Academia / Izuku Midoriya", "family": "awakenings", "rarity": "epic",
+      "short_text": "Low health. One last surge.",
+      "rules_text": "Below 35% HP: gain +10% attack for 5 seconds and reduce your next two received hits by 35%. Once per fighter. No revive or hitstun escape.",
+      "activation": "buff", "target": "own_active", "conditions": ["alive", "round_active", "hp_below_0.35", "awakening_slot_empty", "fighter_use_available", "not_time_locked"],
+      "required_capabilities": ["damage_modifier_registry", "bounded_hit_shield"],
+      "reservation_ticks": 0, "windup_ticks": 6, "interruptible": false, "duration_ticks": 300,
+      "effect": {"handler": "apply_awakening", "attack_multiplier": 1.1, "shield_received_damage_multiplier": 0.65, "shield_hit_count": 2, "clears_hitstun": false},
+      "limits": {"uses_per_fighter_encounter": 1, "awakening_slots_per_fighter": 1}, "art": {"sheet": "awakenings", "panel": 2}
+    },
+    {
+      "id": "za_warudo", "revision": 1, "name": "ZA WARUDO", "short_name": "ZA WARUDO",
+      "reference": "JoJo's Bizarre Adventure / DIO and The World", "family": "plot_twists", "rarity": "legendary",
+      "short_text": "Time stops. Your chance begins.",
+      "rules_text": "After a brief telegraph, freeze the opponent's owned fighter, helpers and projectiles for 1.2 seconds. Ends at 20% max-HP damage. Both coaches are card-locked during the stop.",
+      "activation": "world", "target": "opponent_owner_scope", "conditions": ["alive", "round_active", "target_alive", "no_exclusive_world_effect", "not_time_locked"],
+      "required_capabilities": ["owned_time_lock", "safe_time_lock_restore", "damage_cap_registry"],
+      "reservation_ticks": 0, "windup_ticks": 18, "interruptible": false, "duration_ticks": 72,
+      "effect": {"handler": "owned_time_lock", "received_damage_cap_fraction": 0.2, "freeze_helpers": true, "freeze_projectiles": true, "lock_both_coaches": true, "pause_both_hype": true},
+      "limits": {"uses_per_coach_encounter": 1}, "art": {"sheet": "plot_twists", "panel": 0}
+    },
+    {
+      "id": "senzu_bean", "revision": 1, "name": "SENZU BEAN", "short_name": "SENZU",
+      "reference": "Dragon Ball / Karin's Senzu Beans", "family": "plot_twists", "rarity": "common",
+      "short_text": "Find a breather. Recover 12% HP.",
+      "rules_text": "While grounded and free to act, begin a half-second recovery. Heal 12% max HP on completion. Taking a hit interrupts it and spends the card. No revive.",
+      "activation": "recovery", "target": "own_active", "conditions": ["alive", "round_active", "hp_below_full", "grounded", "control_or_validated_cancel", "not_time_locked"],
+      "required_capabilities": ["safe_action_window", "interruptible_recovery", "bounded_heal"],
+      "reservation_ticks": 60, "windup_ticks": 30, "interruptible": true, "duration_ticks": 0,
+      "effect": {"handler": "heal", "max_hp_fraction": 0.12, "revives": false},
+      "limits": {}, "art": {"sheet": "plot_twists", "panel": 1}
+    },
+    {
+      "id": "pot_of_greed", "revision": 1, "name": "POT OF GREED", "short_name": "POT OF GREED",
+      "reference": "Yu-Gi-Oh! / Pot of Greed", "family": "plot_twists", "rarity": "rare",
+      "short_text": "Draw two. Once per encounter.",
+      "rules_text": "Draw two through the bounded pending queue. Once per coach each encounter. These draws generate no Hype and obey rarity, duplicate and unique-card limits.",
+      "activation": "draw", "target": "own_coach", "conditions": ["alive", "round_active", "coach_use_available", "draw_ticket_capacity", "not_time_locked"],
+      "required_capabilities": ["bounded_bonus_draw"],
+      "reservation_ticks": 0, "windup_ticks": 0, "interruptible": false, "duration_ticks": 0,
+      "effect": {"handler": "draw_cards", "count": 2, "hype_gain": 0},
+      "limits": {"uses_per_coach_encounter": 1}, "art": {"sheet": "plot_twists", "panel": 2}
+    }
+  ]
+}
