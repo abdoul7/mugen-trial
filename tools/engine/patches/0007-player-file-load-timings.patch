@@ -1,0 +1,47 @@
+diff --git a/repo/playerdefinition.cpp b/repo/playerdefinition.cpp
+index 99514fa..8de3a13 100644
+--- a/repo/playerdefinition.cpp
++++ b/repo/playerdefinition.cpp
+@@ -159,7 +159,16 @@ static int parsePlayerPreferredPalette(int tPalette, MugenDefScript* tScript) {
+ 	}
+ }
+ 
++// [JFV] patch 0007: time each part of loading a character (debug log only)
++static uint64_t gJfvFileStepStart;
++static void jfvFileStep(DreamPlayer* tPlayer, const char* tStep) {
++	const uint64_t now = getSystemTicks();
++	logFormat("[JFV] player %d %s: %llu ms", tPlayer->mRootID, tStep, (unsigned long long)((now - gJfvFileStepStart) / 1000));
++	gJfvFileStepStart = now;
++}
++
+ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* tScript) {
++	gJfvFileStepStart = getSystemTicks();
+ 	gJfvFighterSpriteCap[tPlayer->mRootID & 1] = getMugenDefIntegerOrDefault(tScript, "info", "jfv.spritecap", JFV_FIGHTER_MAX_SPRITE_DIMENSION);
+ 	char file[200];
+ 	char path[1024];
+@@ -171,6 +180,7 @@ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* t
+ 	assert(strcmp("", file));
+ 	sprintf(scriptPath, "%s%s", path, file);
+ 	tPlayer->mHeader->mFiles.mCommands = loadDreamMugenCommandFile(scriptPath);
++	jfvFileStep(tPlayer, "commands (.cmd)");
+ 	logMemoryState();
+ 	tPlayer->mCommandID = registerDreamMugenCommands(tPlayer->mControllerID, &tPlayer->mHeader->mFiles.mCommands);
+ 	logMemoryState();
+@@ -215,7 +225,9 @@ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* t
+ 	getMugenDefStringOrDefault(file, tScript, "files", "anim", "");
+ 	assert(strcmp("", file));
+ 	sprintf(scriptPath, "%s%s", path, file);
++	jfvFileStep(tPlayer, "states (.cns/.st + common)");
+ 	tPlayer->mHeader->mFiles.mAnimations = loadMugenAnimationFile(scriptPath);
++	jfvFileStep(tPlayer, "animations (.air)");
+ 	logMemoryState();
+ 
+ 	char palettePath[1024];
+@@ -240,6 +252,7 @@ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* t
+ 	sprintf(scriptPath, "%s%s", path, file);
+ 	if (isFile(scriptPath)) {
+ 		tPlayer->mHeader->mFiles.mSounds = loadMugenSoundFile(scriptPath);
++		jfvFileStep(tPlayer, "sounds (.snd)");
+ 	}
+ 	else {
+ 		tPlayer->mHeader->mFiles.mSounds = createEmptyMugenSoundFile();
