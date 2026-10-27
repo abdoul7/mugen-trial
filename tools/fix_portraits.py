@@ -38,7 +38,30 @@ def _fit(img, size, bottom=False):
     return canvas
 
 
-def fix(sff_path, source, used_elsewhere=()):
+def _apply_sff_palette(d, ldata_offset, pal_index, img):
+    po, pn = struct.unpack_from("<II", d, 0x2C)
+    seen = set()
+    while pal_index not in seen:
+        seen.add(pal_index)
+        _, _, ncol, link, ofs, ln = struct.unpack_from("<HHHHII", d, po + pal_index * 16)
+        if ln == 0 and link != pal_index:  # linked palette: same colours as another entry
+            pal_index = link
+            continue
+        raw = d[ldata_offset + ofs: ldata_offset + ofs + ln]
+        break
+    colours = [tuple(raw[i:i + 3]) for i in range(0, len(raw), 4)]
+    idx = img.convert("P") if img.mode != "P" else img
+    out = Image.new("RGBA", idx.size)
+    px = idx.load()
+    po_ = out.load()
+    for y in range(idx.size[1]):
+        for x in range(idx.size[0]):
+            c = px[x, y]
+            po_[x, y] = (0, 0, 0, 0) if c == 0 or c >= len(colours) else colours[c] + (255,)
+    return out
+
+
+def fix(sff_path, source, used_elsewhere=(), slots=("icon", "big")):
     d = bytearray(open(sff_path, "rb").read())
     if bytes(d[:12]) != b"ElecbyteSpr\x00" or d[15] != 2:
         raise ValueError(f"{sff_path}: not SFF v2")
@@ -57,7 +80,11 @@ def fix(sff_path, source, used_elsewhere=()):
     if s[7] not in (10, 11, 12):
         raise ValueError(f"{sff_path}: source {source} is format {s[7]}, only PNG sources are supported")
     base = to if s[12] & 1 else lo
-    face = Image.open(io.BytesIO(bytes(d[base + s[9] + 4: base + s[9] + s[10]]))).convert("RGBA")
+    face = Image.open(io.BytesIO(bytes(d[base + s[9] + 4: base + s[9] + s[10]])))
+    if s[7] == 10:
+        # PNG8: the colours live in the SFF palette table, not in the PNG; index 0 is transparent
+        face = _apply_sff_palette(d, lo, s[11], face)
+    face = face.convert("RGBA")
 
     def put(slot, img, fallback_candidates):
         idx = nodes.get(slot)
@@ -77,8 +104,11 @@ def fix(sff_path, source, used_elsewhere=()):
 
     spare = [k for k in sorted(nodes) if k[0] == 9000 and k[1] > 1 and k != tuple(source)
              and k not in set(map(tuple, used_elsewhere))]
-    put((9000, 0), _fit(face, ICON), [])
-    put((9000, 1), _fit(face, BIG, bottom=True), spare)
+    if "icon" in slots:
+        put((9000, 0), _fit(face, ICON), [])
+    if "big" in slots:
+        put((9000, 1), _fit(face, BIG, bottom=True), spare)
     struct.pack_into("<I", d, 0x40, len(d) - to)  # tdata length
     open(sff_path, "wb").write(d)
-    return f"portraits 9000,0 {ICON[0]}x{ICON[1]} + 9000,1 {BIG[0]}x{BIG[1]} from {source[0]},{source[1]}"
+    made = [f"9000,0 {ICON[0]}x{ICON[1]}"] * ("icon" in slots) + [f"9000,1 {BIG[0]}x{BIG[1]}"] * ("big" in slots)
+    return f"portraits {' + '.join(made)} from {source[0]},{source[1]}"
