@@ -1,0 +1,292 @@
+diff --git a/repo/gamelogic.h b/repo/gamelogic.h
+index fe44b62..d54077b 100644
+--- a/repo/gamelogic.h
++++ b/repo/gamelogic.h
+@@ -17,6 +17,7 @@ typedef enum {
+ 	GAME_MODE_EXHIBIT,
+ 	GAME_MODE_OSU,
+ 	GAME_MODE_NETPLAY,
++	GAME_MODE_LEGENDS, // [JFV] patch 0010: Legends relay (legendsmode.cpp)
+ } GameMode;
+ 
+ ActorBlueprint getDreamGameLogic();
+@@ -59,6 +60,7 @@ void setGameModeVersus();
+ void setGameModeSurvival(float tLifePercentage, int tRound);
+ void setGameModeTraining(); 
+ void setGameModeWatch();
++void setGameModeLegends(); // [JFV] patch 0010
+ void setGameModeSuperWatch();
+ void setGameModeExhibit(int tEndTime, int tIsDisplayingBars, int tIsDisplayingDebug);
+ void setGameModeStory();
+diff --git a/repo/gamelogic.cpp b/repo/gamelogic.cpp
+index 4d8dd23..a07c70c 100644
+--- a/repo/gamelogic.cpp
++++ b/repo/gamelogic.cpp
+@@ -920,6 +920,31 @@ void setGameModeTraining() {
+ 	gGameLogicData.mMode = GAME_MODE_TRAINING;
+ }
+ 
++// [JFV] patch 0010: one Legends bout. One round, no engine timer (Legends keeps its own 90 s bout
++// clock and judges timeouts by HP fraction), both fighters CPU-controlled; the coaches play cards.
++// Legends sets the start life fractions after this call.
++void setGameModeLegends()
++{
++	gGameLogicData.mRoundsToWin = 1;
++	gGameLogicData.mHasCustomRoundsToWinAmount = 1;
++	gGameLogicData.mHasCustomTimerDuration = 0;
++	gGameLogicData.mStartRound = 1;
++
++	setFightResultActive(0);
++	setFightContinueInactive();
++	setTimerInfinite();
++	setPlayersToRealFightMode();
++	setPlayerArtificial(0, getDifficulty());
++	setPlayerArtificial(1, getDifficulty());
++	setPlayerPreferredPalette(0, 1);
++	setPlayerPreferredPalette(1, 2);
++	setPlayerStartLifePercentage(0, 1);
++	setPlayerStartLifePercentage(1, 1);
++	resetStoryHelper();
++
++	gGameLogicData.mMode = GAME_MODE_LEGENDS;
++}
++
+ void setGameModeWatch()
+ {
+ 	gGameLogicData.mRoundsToWin = 2;
+diff --git a/repo/titlescreen.cpp b/repo/titlescreen.cpp
+index 8be9f52..3365a6b 100644
+--- a/repo/titlescreen.cpp
++++ b/repo/titlescreen.cpp
+@@ -40,6 +40,7 @@
+ #include "freeplaymode.h"
+ #include "intro.h"
+ #include "config.h"
++#include "legendsmode.h"
+ #include "netplayscreen.h"
+ #include "stage.h"
+ 
+@@ -130,6 +131,16 @@ static void gotoArcadeMode(void* tCaller) {
+ 	startArcadeMode();
+ }
+ 
++static void gotoLegendsMode(void* tCaller) {
++	(void)tCaller;
++	startLegendsMode();
++}
++
++// [JFV] patch 0010: Legends (menu.itemname.legends); empty name = not on the menu
++static void legendsCB() {
++	addFadeOut(gTitleScreenData.mHeader.mFadeOutTime, gotoLegendsMode, NULL);
++}
++
+ static void arcadeCB() {
+ 	addFadeOut(gTitleScreenData.mHeader.mFadeOutTime, gotoArcadeMode, NULL);
+ }
+@@ -483,6 +494,7 @@ static void loadTitleScreen() {
+ 	gTitleScreenData.mMenus = new_vector();
+ 	addMenuPoint("menu.itemname.story", storyCB);
+ 	addMenuPoint("menu.itemname.arcade", arcadeCB);
++	addMenuPoint("menu.itemname.legends", legendsCB);
+ 	addMenuPoint("menu.itemname.freeplay", freePlayCB);
+ 	addMenuPoint("menu.itemname.versus", versusCB);
+ 	if (isOnWindows()) {
+@@ -637,6 +649,7 @@ static void updateDemoMode() {
+ }
+ 
+ static void updateTitleScreen() {
++	if (startPendingLegendsAutotest()) return; // [JFV] patch 0010: Legends autotest
+ 	updateItemSelection();
+ 	updateMenuBasePosition();
+ 	updateMenuElementPositions();
+diff --git a/repo/fightscreen.cpp b/repo/fightscreen.cpp
+index eb90791..3452f7a 100644
+--- a/repo/fightscreen.cpp
++++ b/repo/fightscreen.cpp
+@@ -25,6 +25,7 @@
+ #include "fightui.h"
+ #include "mugenexplod.h"
+ #include "gamelogic.h"
++#include "legendsmode.h"
+ #include "config.h"
+ #include "playerhitdata.h"
+ #include "titlescreen.h"
+@@ -141,6 +142,7 @@ static void loadFightScreen() {
+ 	}
+ 
+ 	instantiateActor(getDreamFightUIBP());
++	if (getGameMode() == GAME_MODE_LEGENDS) instantiateActor(getLegendsFightHandler()); // [JFV] patch 0010
+ 	instantiateActor(getDreamGameLogic());
+ 	setActorUnpausable(instantiateActor(getJfvPauseHandler())); // [JFV] patch 0004: Start = pause
+ 
+diff --git a/repo/ai.cpp b/repo/ai.cpp
+index 92540bb..a99e1f4 100644
+--- a/repo/ai.cpp
++++ b/repo/ai.cpp
+@@ -1,6 +1,7 @@
+ #include "ai.h"
+ 
+ #include <assert.h>
++#include <algorithm>
+ 
+ #include <prism/datastructures.h>
+ #include <prism/math.h>
+@@ -10,6 +11,7 @@
+ #include "gamelogic.h"
+ #include "config.h"
+ #include "mugenstagehandler.h"
++#include "legendsmode.h"
+ 
+ using namespace std;
+ 
+@@ -55,20 +57,43 @@ static void unloadAIHandler(void* tData) {
+ 	stl_delete_list(gAI.mHandledPlayers);
+ }
+ 
++static const string* pickLegendsTaggedCommand(PlayerAI* e, const LegendsAIProfile& tProfile);
++
+ static void setRandomPlayerCommandActive(PlayerAI* e) {
+ 	int i = randfromInteger(0, int(e->mCommandNames.size()) - 1);
+ 
+-	const string& name = e->mCommandNames[i];
++	const string* picked = &e->mCommandNames[i];
++	LegendsAIProfile profile; // [JFV] patch 0010: also on this path (AI.Cheat = 1 in mugen.cfg uses it)
++	const string* tagged = getLegendsAIProfile(e->mPlayer->mRootID, &profile) ? pickLegendsTaggedCommand(e, profile) : nullptr;
++	if (tagged) picked = tagged;
++	const string& name = *picked;
+ 
+ 	setDreamPlayerCommandActiveForAI(e->mPlayer->mCommandID, name.data(), 2);
++	noteLegendsAICommand(e->mPlayer->mRootID, tagged != nullptr);
++}
++
++// [JFV] patch 0010: with a Legends coach profile, a share (tagBias) of the command picks comes from
++// the fighter's adapter-tagged commands (e.g. approach, poke) instead of a uniform random pick.
++// Only commands the character really defines are used; the rest of the AI is unchanged.
++static const string* pickLegendsTaggedCommand(PlayerAI* e, const LegendsAIProfile& tProfile) {
++	if (tProfile.taggedCommands.empty() || randfrom(0, 1) >= tProfile.tagBias) return nullptr;
++	const string& wanted = tProfile.taggedCommands[randfromInteger(0, int(tProfile.taggedCommands.size()) - 1)];
++	for (const auto& name : e->mCommandNames) if (name == wanted) return &name;
++	return nullptr;
+ }
+ 
+ static int setRandomPlayerCommandActiveIfTimePossible(PlayerAI* e) {
+ 	int i = randfromInteger(0, int(e->mCommandNames.size()) - 1);
+-	const string& name = e->mCommandNames[i];
++	const string* picked = &e->mCommandNames[i];
++	LegendsAIProfile profile;
++	const auto hasProfile = getLegendsAIProfile(e->mPlayer->mRootID, &profile);
++	const string* tagged = hasProfile ? pickLegendsTaggedCommand(e, profile) : nullptr;
++	if (tagged) picked = tagged;
++	const string& name = *picked;
+ 	const auto duration = getDreamCommandMinimumDuration(e->mPlayer->mCommandID, name.data());
+ 	if (duration < e->mRandomInputNow) {
+ 		setDreamPlayerCommandActiveForAI(e->mPlayer->mCommandID, name.data(), 2);
++		noteLegendsAICommand(e->mPlayer->mRootID, tagged != nullptr);
+ 		return 1;
+ 	}
+ 	return 0;
+@@ -81,10 +106,17 @@ static void updateAIMovement(PlayerAI* e) {
+ 	const auto otherPlayerStateType = getPlayerStateType(otherPlayer);
+ 	const auto otherPlayerStateMoveType = getPlayerStateMoveType(otherPlayer);
+ 
+-	if (dist > 50) {
++	// [JFV] patch 0010: a Legends coach profile moves the approach band (e.g. My Ninja Way: closer)
++	float approachDistance = 50, stopDistance = 30;
++	LegendsAIProfile profile;
++	if (getLegendsAIProfile(e->mPlayer->mRootID, &profile)) {
++		approachDistance = profile.approachDistance;
++		stopDistance = profile.stopDistance;
++	}
++	if (dist > approachDistance) {
+ 		e->mIsMoving = 1;
+ 	}
+-	else if (dist < 30) {
++	else if (dist < stopDistance) {
+ 		e->mIsMoving = 0;
+ 	}
+ 
+@@ -114,6 +146,10 @@ static void updateAIGuarding(PlayerAI* e) {
+ 			float guardPossibilityMin = 0.2f;
+ 			float guardPossibilityMax = 0.7f;
+ 			float guardPossibility = guardPossibilityMin + (guardPossibilityMax - guardPossibilityMin) * e->mDifficultyFactor;
++			LegendsAIProfile profile;
++			if (getLegendsAIProfile(e->mPlayer->mRootID, &profile)) { // [JFV] patch 0010: bias, clamped to 15-85%
++				guardPossibility = std::max(0.15f, std::min(0.85f, guardPossibility + profile.guardBias));
++			}
+ 			e->mWasGuardingSuccessful = (rand < guardPossibility);
+ 			e->mIsGuardingLogicActive = 1;
+ 		}
+@@ -152,6 +188,11 @@ static void updateAICommands(PlayerAI* e) {
+ 		int upperDurationMax = 7;
+ 		int lowerDuration = (int)(lowerDurationMin + (lowerDurationMax - lowerDurationMin) * e->mDifficultyFactor);
+ 		int upperDuration = (int)(upperDurationMin + (upperDurationMax - upperDurationMin) * e->mDifficultyFactor);
++		LegendsAIProfile profile;
++		if (getLegendsAIProfile(e->mPlayer->mRootID, &profile)) { // [JFV] patch 0010: tries moves more or less often
++			lowerDuration = std::max(1, (int)(lowerDuration * profile.commandIntervalScale));
++			upperDuration = std::max(lowerDuration, (int)(upperDuration * profile.commandIntervalScale));
++		}
+ 		e->mRandomInputDuration = randfromInteger(lowerDuration, upperDuration);
+ 	}
+ }
+diff --git a/repo/playerdefinition.cpp b/repo/playerdefinition.cpp
+index 8de3a13..31e83ae 100644
+--- a/repo/playerdefinition.cpp
++++ b/repo/playerdefinition.cpp
+@@ -47,6 +47,7 @@ static int gJfvFighterSpriteCap[2] = { JFV_FIGHTER_MAX_SPRITE_DIMENSION, JFV_FIG
+ #include "mugenexplod.h"
+ #include "pausecontrollers.h"
+ #include "config.h"
++#include "legendsmode.h"
+ #include "mugenassignmentevaluator.h"
+ 
+ using namespace std;
+@@ -1956,14 +1957,14 @@ static void setPlayerHit(DreamPlayer* p, DreamPlayer* tOtherPlayer, void* tHitDa
+ 	int powerUp1;
+ 	int powerUp2;
+ 	if (isPlayerGuarding(p)) {
+-		damage = (int)(getActiveHitDataGuardDamage(p) * getPlayerAttackMultiplier(tOtherPlayer) * getInvertedPlayerDefenseMultiplier(p));
++		damage = (int)(getActiveHitDataGuardDamage(p) * getPlayerAttackMultiplier(tOtherPlayer) * getInvertedPlayerDefenseMultiplier(p) * getLegendsDamageScale(tOtherPlayer, p, 1)); // [JFV] patch 0010: card modifiers (1 outside Legends)
+ 		powerUp1 = getActiveHitDataPlayer2GuardPowerAdded(p);
+ 		powerUp2 = getActiveHitDataPlayer1GuardPowerAdded(p);
+ 		hitPauseDuration = getActiveHitDataPlayer1GuardPauseTime(p);
+ 		hitShakeDuration = getActiveHitDataPlayer2GuardPauseTime(p);
+ 	}
+ 	else {
+-		damage = (int)(getActiveHitDataDamage(p) * getPlayerAttackMultiplier(tOtherPlayer) * getInvertedPlayerDefenseMultiplier(p));
++		damage = (int)(getActiveHitDataDamage(p) * getPlayerAttackMultiplier(tOtherPlayer) * getInvertedPlayerDefenseMultiplier(p) * getLegendsDamageScale(tOtherPlayer, p, 0)); // [JFV] patch 0010
+ 		powerUp1 = getActiveHitDataPlayer2PowerAdded(p);
+ 		powerUp2 = getActiveHitDataPlayer1PowerAdded(p);
+ 		hitPauseDuration = getActiveHitDataPlayer1PauseTime(p);
+diff --git a/repo/initscreen.cpp b/repo/initscreen.cpp
+index aa9db68..767b7aa 100644
+--- a/repo/initscreen.cpp
++++ b/repo/initscreen.cpp
+@@ -1,6 +1,7 @@
+ #include "initscreen.h"
+ 
+ #include "intro.h"
++#include "legendsmode.h"
+ 
+ #ifdef VITA
+ // [JFV] patch 0006: autotest. If ux0:data/JFVT00001/autotest.txt exists (lines: p1 .def path, p2 .def
+@@ -49,6 +50,7 @@ static int jfvTryAutotest() {
+ static void loadInitScreen() {
+ #ifdef VITA
+ 	if (jfvTryAutotest()) return;
++	if (tryStartLegendsAutotest()) return; // [JFV] patch 0010
+ #endif
+ 	setNewScreen(startIntroFirstTimeAndReturnScreen());
+ }
+diff --git a/repo/vita/CmakeLists.txt b/repo/vita/CmakeLists.txt
+index b341a61..2bb295a 100644
+--- a/repo/vita/CmakeLists.txt
++++ b/repo/vita/CmakeLists.txt
+@@ -52,6 +52,8 @@ add_executable(${PROJECT_NAME}
+   ../main.cpp
+   ../afterimage.cpp
+   ../ai.cpp
++  ../legendscore.cpp
++  ../legendsmode.cpp
+   ../arcademode.cpp
+   ../boxcursorhandler.cpp
+   ../characterselectscreen.cpp

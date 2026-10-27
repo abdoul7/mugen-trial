@@ -1,0 +1,235 @@
+{
+ "version": 1,
+ "notes": "Engine schema for docs/legends-design.md section 8. Names, rules text, flavor and timings follow the art kit's data/catalog.json (content legends-starter-0.1). Cards without a safe engine implementation are disabled with a reason and never drawn. Mapping where the kit names an abstract weight: approach_weight_add becomes a closer generic-AI approach band (approach/stop px). Ticks are 60 Hz.",
+ "rarity_weights": {
+  "common": 55,
+  "rare": 30,
+  "epic": 12,
+  "legendary": 3
+ },
+ "hype": {
+  "max": 900,
+  "tick": 1,
+  "event": 60,
+  "event_cap": 120,
+  "event_window": 60
+ },
+ "play_cooldown": 90,
+ "cards": [
+  {
+   "id": "my_ninja_way",
+   "family": "resolve",
+   "rarity": "common",
+   "name": "MY NINJA WAY",
+   "short": "NINJA WAY",
+   "text": "Equip: prefer close pressure and approach opportunities. Guard preference is slightly reduced. Replaces your active Resolve.",
+   "enabled": true,
+   "effect": "coach_profile",
+   "params": {
+    "approach": 24,
+    "stop": 12,
+    "guard": -0.08,
+    "interval": 0.8,
+    "tag.bias": 0.5
+   },
+   "tags": [
+    "approach",
+    "poke"
+   ],
+   "flavor": "Keep the pressure. Guard less.",
+   "reference": "Naruto / Naruto Uzumaki"
+  },
+  {
+   "id": "saiyan_pride",
+   "family": "resolve",
+   "rarity": "rare",
+   "name": "SAIYAN PRIDE",
+   "short": "PRIDE",
+   "text": "Equip: reserve native power and prefer validated super opportunities against a punishable opponent. No free damage or guaranteed hit.",
+   "enabled": false,
+   "disabled_reason": "needs adapters that tag supers and punish windows; none are verified yet",
+   "effect": "none",
+   "requires": "adapter",
+   "flavor": "Save power. Punish the opening.",
+   "reference": "Dragon Ball / Vegeta"
+  },
+  {
+   "id": "scarlet_resolve",
+   "family": "resolve",
+   "rarity": "epic",
+   "name": "SCARLET RESOLVE",
+   "short": "SCARLET",
+   "text": "Equip: prefer safe spacing and counters after observed whiffs. Guard chance rises modestly, within the global clamp. No future-state knowledge.",
+   "enabled": false,
+   "disabled_reason": "whiff detection (attack that missed) is not implemented in the engine bridge",
+   "effect": "none",
+   "flavor": "Stay composed. Counter the whiff.",
+   "reference": "Hunter x Hunter / Kurapika"
+  },
+  {
+   "id": "chidori",
+   "family": "secret_arts",
+   "rarity": "common",
+   "name": "CHIDORI",
+   "short": "CHIDORI",
+   "text": "Arm for up to 1 second. At a legal grounded opening, commit a lightning-rush echo after a short interruptible windup. One hit; no homing.",
+   "enabled": true,
+   "effect": "echo_projectile",
+   "reservation": 60,
+   "windup": 10,
+   "interruptible": true,
+   "needs_grounded": true,
+   "needs_control": true,
+   "params": {
+    "speed": 9,
+    "range": 140,
+    "damage": 0.06,
+    "spawn.x": 16,
+    "spawn.y": -36,
+    "hit.w": 18
+   },
+   "flavor": "A lightning rush. It can be blocked.",
+   "reference": "Naruto / Sasuke Uchiha"
+  },
+  {
+   "id": "spirit_gun",
+   "family": "secret_arts",
+   "rarity": "common",
+   "name": "SPIRIT GUN",
+   "short": "SPIRIT GUN",
+   "text": "At a legal opening, fire a straight energy echo after an interruptible startup. One hit. It can be blocked or avoided.",
+   "enabled": true,
+   "effect": "echo_projectile",
+   "reservation": 60,
+   "windup": 12,
+   "interruptible": true,
+   "needs_control": true,
+   "params": {
+    "speed": 5,
+    "range": 260,
+    "damage": 0.05,
+    "spawn.x": 22,
+    "spawn.y": -44,
+    "hit.w": 14
+   },
+   "flavor": "One shot. Pick your opening.",
+   "reference": "Yu Yu Hakusho / Yusuke Urameshi"
+  },
+  {
+   "id": "bungee_gum",
+   "family": "secret_arts",
+   "rarity": "rare",
+   "name": "BUNGEE GUM",
+   "short": "BUNGEE GUM",
+   "text": "Fire a tether echo. If its one hit connects, apply a short separation limit and a gentle pull. A miss or block creates no tether.",
+   "enabled": false,
+   "disabled_reason": "needs a safe way to limit fighter separation without forcing states",
+   "effect": "none",
+   "flavor": "Land a tether. Control the gap.",
+   "reference": "Hunter x Hunter / Hisoka"
+  },
+  {
+   "id": "kaio_ken",
+   "family": "awakenings",
+   "rarity": "rare",
+   "name": "KAIO-KEN",
+   "short": "KAIO-KEN",
+   "text": "For 6 seconds: +20% attack and more approach pressure. Lose 1% max HP each second; this strain cannot KO you. Does not speed up animation frames.",
+   "enabled": true,
+   "effect": "attack_buff",
+   "duration": 360,
+   "params": {
+    "attack": 1.2,
+    "strain": 0.01,
+    "approach": 26,
+    "stop": 14
+   },
+   "flavor": "Push harder. Your body pays.",
+   "reference": "Dragon Ball / Son Goku",
+   "windup": 6
+  },
+  {
+   "id": "bankai",
+   "family": "awakenings",
+   "rarity": "epic",
+   "name": "BANKAI",
+   "short": "BANKAI",
+   "text": "For 6 seconds: +15% attack and +25% validated native power gain. Adds an aura; transformation is allowed only through a verified character adapter.",
+   "enabled": false,
+   "disabled_reason": "power-gain scaling is not hooked yet; shipping only the attack part would not be this card",
+   "effect": "none",
+   "flavor": "Release power. Keep the pressure.",
+   "reference": "Bleach / Ichigo Kurosaki"
+  },
+  {
+   "id": "plus_ultra",
+   "family": "awakenings",
+   "rarity": "epic",
+   "name": "PLUS ULTRA",
+   "short": "PLUS ULTRA",
+   "text": "Below 35% HP: gain +10% attack for 5 seconds and reduce your next two received hits by 35%. Once per fighter. No revive or hitstun escape.",
+   "enabled": true,
+   "effect": "comeback_buff",
+   "duration": 300,
+   "hp_max": 0.35,
+   "params": {
+    "attack": 1.1,
+    "reduce": 0.35,
+    "hits": 2
+   },
+   "flavor": "Low health. One last surge.",
+   "reference": "My Hero Academia / Izuku Midoriya",
+   "windup": 6,
+   "per_fighter": 1
+  },
+  {
+   "id": "za_warudo",
+   "family": "plot_twists",
+   "rarity": "legendary",
+   "name": "ZA WARUDO",
+   "short": "ZA WARUDO",
+   "text": "After a brief telegraph, freeze the opponent's owned fighter, helpers and projectiles for 1.2 seconds. Ends at 20% max-HP damage. Both coaches are card-locked during the stop.",
+   "enabled": false,
+   "disabled_reason": "owner-scoped freezing of a fighter with its helpers and projectiles, with restoration on KO/exit, is not implemented",
+   "effect": "none",
+   "flavor": "Time stops. Your chance begins.",
+   "reference": "JoJo's Bizarre Adventure / DIO and The World"
+  },
+  {
+   "id": "senzu_bean",
+   "family": "plot_twists",
+   "rarity": "common",
+   "name": "SENZU BEAN",
+   "short": "SENZU",
+   "text": "While grounded and free to act, begin a half-second recovery. Heal 12% max HP on completion. Taking a hit interrupts it and spends the card. No revive.",
+   "enabled": true,
+   "effect": "heal",
+   "reservation": 60,
+   "windup": 30,
+   "interruptible": true,
+   "needs_grounded": true,
+   "needs_control": true,
+   "params": {
+    "heal": 0.12
+   },
+   "flavor": "Find a breather. Recover 12% HP.",
+   "reference": "Dragon Ball / Karin's Senzu Beans"
+  },
+  {
+   "id": "pot_of_greed",
+   "family": "plot_twists",
+   "rarity": "rare",
+   "name": "POT OF GREED",
+   "short": "POT OF GREED",
+   "text": "Draw two through the bounded pending queue. Once per coach each encounter. These draws generate no Hype and obey rarity, duplicate and unique-card limits.",
+   "enabled": true,
+   "effect": "bonus_draw",
+   "per_encounter": 1,
+   "params": {
+    "draws": 2
+   },
+   "flavor": "Draw two. Once per encounter.",
+   "reference": "Yu-Gi-Oh! / Pot of Greed"
+  }
+ ]
+}
