@@ -1,0 +1,77 @@
+diff --git a/repo/mugenassignment.cpp b/repo/mugenassignment.cpp
+index d0c3a02..0ba24f0 100644
+--- a/repo/mugenassignment.cpp
++++ b/repo/mugenassignment.cpp
+@@ -1268,10 +1268,18 @@ DreamMugenAssignment* parseDreamMugenAssignmentFromString(char * tText)
+ 	}
+ }
+ 
++// [JFV] patch 0009: time spent parsing expressions (only top-level calls; recursion is inside)
++uint64_t gJfvAssignmentParseTicks = 0;
++uint64_t gJfvAssignmentParseCount = 0;
++
+ DreamMugenAssignment*  parseDreamMugenAssignmentFromString(const char* tText) {
++	const uint64_t jfvT0 = getSystemTicks();
+ 	char evalText[1024];
+ 	strcpy(evalText, tText);
+-	return parseDreamMugenAssignmentFromString(evalText);
++	DreamMugenAssignment* ret = parseDreamMugenAssignmentFromString(evalText);
++	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
++	gJfvAssignmentParseCount++;
++	return ret;
+ }
+ 
+ uint8_t fetchDreamAssignmentFromGroupAndReturnWhetherItExists(const char* tName, MugenDefScriptGroup* tGroup, DreamMugenAssignment** tOutput) {
+@@ -1287,8 +1295,11 @@ uint8_t fetchDreamAssignmentFromGroupAndReturnWhetherItExists(const char* tName,
+ 
+ void fetchDreamAssignmentFromGroupAsElement(MugenDefScriptGroupElement * tElement, DreamMugenAssignment** tOutput)
+ {
++	const uint64_t jfvT0 = getSystemTicks();
+ 	char* text = getAllocatedMugenDefStringVariableForAssignmentAsElement(tElement);
+ 	*tOutput = parseDreamMugenAssignmentFromString(text);
+ 	freeMemory(text);
++	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
++	gJfvAssignmentParseCount++;
+ }
+ 
+diff --git a/repo/mugenstatereader.cpp b/repo/mugenstatereader.cpp
+index 21b4d0d..4fb2579 100644
+--- a/repo/mugenstatereader.cpp
++++ b/repo/mugenstatereader.cpp
+@@ -361,6 +361,8 @@ static void loadMugenStateDefinitionsFromScript(DreamMugenStates* tStates, Mugen
+ 
+ void loadDreamMugenStateDefinitionsFromFile(DreamMugenStates* tStates, const char* tPath, int tIsOverwritable) {
+ 	MugenDefScript script;
++	extern uint64_t gJfvAssignmentParseTicks, gJfvAssignmentParseCount; // [JFV] patch 0009
++	const uint64_t jfvParse0 = gJfvAssignmentParseTicks, jfvCount0 = gJfvAssignmentParseCount;
+ 	const uint64_t jfvT0 = getSystemTicks(); // [JFV] patch 0008
+ 	loadMugenDefScript(&script, tPath);
+ 	const uint64_t jfvT1 = getSystemTicks();
+@@ -368,7 +370,7 @@ void loadDreamMugenStateDefinitionsFromFile(DreamMugenStates* tStates, const cha
+ 	gMugenStateControllerProvenanceData.mCurrentScriptPath = tPath;
+ #endif
+ 	loadMugenStateDefinitionsFromScript(tStates, &script, tIsOverwritable);
+-	logFormat("[JFV] script %s: read text %llu ms, build states %llu ms", tPath, (unsigned long long)((jfvT1 - jfvT0) / 1000), (unsigned long long)((getSystemTicks() - jfvT1) / 1000));
++	logFormat("[JFV] script %s: read text %llu ms, build states %llu ms (expressions: %llu ms, %llu parsed)", tPath, (unsigned long long)((jfvT1 - jfvT0) / 1000), (unsigned long long)((getSystemTicks() - jfvT1) / 1000), (unsigned long long)((gJfvAssignmentParseTicks - jfvParse0) / 1000), (unsigned long long)(gJfvAssignmentParseCount - jfvCount0));
+ #ifdef _WIN32
+ 	gMugenStateControllerProvenanceData.mCurrentScriptPath.clear();
+ #endif
+diff --git a/repo/mugenstatecontrollers.cpp b/repo/mugenstatecontrollers.cpp
+index 6e3e3bf..de44071 100644
+--- a/repo/mugenstatecontrollers.cpp
++++ b/repo/mugenstatecontrollers.cpp
+@@ -64,10 +64,14 @@ static void checkSingleElementForTrigger(void* tCaller, void* tData) {
+ 
+ 	if (strcmp(e->mName.data(), caller->mName)) return;
+ 
++	extern uint64_t gJfvAssignmentParseTicks, gJfvAssignmentParseCount; // [JFV] patch 0009
++	const uint64_t jfvT0 = getSystemTicks();
+ 	char* text = getAllocatedMugenDefStringVariableAsElement(e);
+ 
+ 	DreamMugenAssignment* trigger = parseDreamMugenAssignmentFromString(text);
+ 	freeMemory(text);
++	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
++	gJfvAssignmentParseCount++;
+ 
+ 	*caller->mTriggerRoot = makeDreamAndMugenAssignment(*caller->mTriggerRoot, trigger);
+ }

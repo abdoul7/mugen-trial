@@ -1,0 +1,142 @@
+diff --git a/repo/mugenassignment.cpp b/repo/mugenassignment.cpp
+index 0ba24f0..89a7a38 100644
+--- a/repo/mugenassignment.cpp
++++ b/repo/mugenassignment.cpp
+@@ -1,3 +1,5 @@
++#include <unordered_map>
++#include <string>
+ #include "mugenassignment.h"
+ 
+ #include <stdio.h>
+@@ -27,13 +29,39 @@ static struct {
+ 	int mCommandHandlerID;
+ } gMugenAssignmentData;
+ 
++// [JFV] patch 0010: expression cache. Parsing is ~98% of loading a character's scripts, and scripts
++// repeat whole expressions a lot ("ctrl", "time = 0", the same triggers in many states, and every
++// expression twice in a mirror match). Parsed trees are not changed per player while the game runs
++// (static rewriting is off: mugen.cfg staticassignments = 0; raw-variable resolution depends on the
++// name only), and fight-load trees live on the fight memory stack, freed all at once. The one parse-time
++// dependency is "string" -> command index (parseStringConstantFromString), so the key includes the
++// command file the strings are resolved against. Only used while a fight loads (memory stack set).
++static std::unordered_map<std::string, DreamMugenAssignment*> gJfvAssignmentCache;
++static std::string gJfvAssignmentCacheContext;
++static uint32_t gJfvAssignmentCacheHits, gJfvAssignmentCacheMisses;
++
++void setDreamAssignmentCacheContext(const char* tContext) {
++	gJfvAssignmentCacheContext = tContext ? tContext : "";
++}
++
++static void clearJfvAssignmentCache() {
++	if (gJfvAssignmentCacheHits || gJfvAssignmentCacheMisses) {
++		logFormat("[JFV] expression cache: %u reused, %u parsed", gJfvAssignmentCacheHits, gJfvAssignmentCacheMisses);
++	}
++	gJfvAssignmentCache.clear();
++	gJfvAssignmentCacheContext.clear();
++	gJfvAssignmentCacheHits = gJfvAssignmentCacheMisses = 0;
++}
++
+ void setupDreamAssignmentReader(MemoryStack* tMemoryStack) {
++	clearJfvAssignmentCache();
+ 	gMugenAssignmentData.mMemoryStack = tMemoryStack;
+ }
+ 
+ void shutdownDreamAssignmentReader()
+ {
+ 	gMugenAssignmentData.mMemoryStack = NULL;
++	clearJfvAssignmentCache();
+ }
+ 
+ void setDreamAssignmentCommandLookupID(int tID)
+@@ -1274,11 +1302,33 @@ uint64_t gJfvAssignmentParseCount = 0;
+ 
+ DreamMugenAssignment*  parseDreamMugenAssignmentFromString(const char* tText) {
+ 	const uint64_t jfvT0 = getSystemTicks();
++	DreamMugenAssignment* ret = parseDreamMugenAssignmentFromStringCached(tText);
++	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
++	gJfvAssignmentParseCount++;
++	return ret;
++}
++
++DreamMugenAssignment* parseDreamMugenAssignmentFromStringCached(const char* tText) {
++	const int isCaching = gMugenAssignmentData.mMemoryStack != NULL;
++	std::string key;
++	if (isCaching) {
++		key.reserve(gJfvAssignmentCacheContext.size() + strlen(tText) + 2);
++		key += gJfvAssignmentCacheContext;
++		key += gMugenAssignmentData.mHasCommandHandlerEntryForLookup ? '\x01' : '\x02';
++		key += tText;
++		auto it = gJfvAssignmentCache.find(key);
++		if (it != gJfvAssignmentCache.end()) {
++			gJfvAssignmentCacheHits++;
++			return it->second;
++		}
++	}
+ 	char evalText[1024];
+ 	strcpy(evalText, tText);
+ 	DreamMugenAssignment* ret = parseDreamMugenAssignmentFromString(evalText);
+-	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
+-	gJfvAssignmentParseCount++;
++	if (isCaching) {
++		gJfvAssignmentCacheMisses++;
++		gJfvAssignmentCache[key] = ret;
++	}
+ 	return ret;
+ }
+ 
+@@ -1297,7 +1347,7 @@ void fetchDreamAssignmentFromGroupAsElement(MugenDefScriptGroupElement * tElemen
+ {
+ 	const uint64_t jfvT0 = getSystemTicks();
+ 	char* text = getAllocatedMugenDefStringVariableForAssignmentAsElement(tElement);
+-	*tOutput = parseDreamMugenAssignmentFromString(text);
++	*tOutput = parseDreamMugenAssignmentFromStringCached(text);
+ 	freeMemory(text);
+ 	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
+ 	gJfvAssignmentParseCount++;
+diff --git a/repo/mugenassignment.h b/repo/mugenassignment.h
+index 7e30845..8a6e4fb 100644
+--- a/repo/mugenassignment.h
++++ b/repo/mugenassignment.h
+@@ -144,6 +144,9 @@ DreamMugenAssignment* makeDreamOrMugenAssignment(DreamMugenAssignment* a, DreamM
+ 
+ DreamMugenAssignment*  parseDreamMugenAssignmentFromString(char* tText);
+ DreamMugenAssignment*  parseDreamMugenAssignmentFromString(const char* tText);
++// [JFV] patch 0010: parse a whole expression, reusing an identical earlier one while a fight loads
++DreamMugenAssignment* parseDreamMugenAssignmentFromStringCached(const char* tText);
++void setDreamAssignmentCacheContext(const char* tContext);
+ 
+ uint8_t fetchDreamAssignmentFromGroupAndReturnWhetherItExists(const char* tName, MugenDefScriptGroup* tGroup, DreamMugenAssignment** tOutput);
+ void fetchDreamAssignmentFromGroupAsElement(MugenDefScriptGroupElement* tElement, DreamMugenAssignment** tOutput);
+diff --git a/repo/mugenstatecontrollers.cpp b/repo/mugenstatecontrollers.cpp
+index de44071..ec98a74 100644
+--- a/repo/mugenstatecontrollers.cpp
++++ b/repo/mugenstatecontrollers.cpp
+@@ -68,7 +68,7 @@ static void checkSingleElementForTrigger(void* tCaller, void* tData) {
+ 	const uint64_t jfvT0 = getSystemTicks();
+ 	char* text = getAllocatedMugenDefStringVariableAsElement(e);
+ 
+-	DreamMugenAssignment* trigger = parseDreamMugenAssignmentFromString(text);
++	DreamMugenAssignment* trigger = parseDreamMugenAssignmentFromStringCached(text); // [JFV] patch 0010
+ 	freeMemory(text);
+ 	gJfvAssignmentParseTicks += getSystemTicks() - jfvT0;
+ 	gJfvAssignmentParseCount++;
+diff --git a/repo/playerdefinition.cpp b/repo/playerdefinition.cpp
+index 8de3a13..272a144 100644
+--- a/repo/playerdefinition.cpp
++++ b/repo/playerdefinition.cpp
+@@ -186,6 +186,7 @@ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* t
+ 	logMemoryState();
+ 
+ 	setDreamAssignmentCommandLookupID(tPlayer->mCommandID);
++	setDreamAssignmentCacheContext(scriptPath); // [JFV] patch 0010: "command" strings resolve against this .cmd
+ 	getMugenDefStringOrDefault(file, tScript, "files", "cns", "");
+ 	assert(strcmp("", file));
+ 	sprintf(scriptPath, "%s%s", path, file);
+@@ -221,6 +222,7 @@ static void loadPlayerFiles(char* tPath, DreamPlayer* tPlayer, MugenDefScript* t
+ 	loadDreamMugenStateDefinitionsFromFile(&tPlayer->mHeader->mFiles.mConstants.mStates, scriptPath);
+ 
+ 	resetDreamAssignmentCommandLookupID();
++	setDreamAssignmentCacheContext(""); // [JFV] patch 0010
+ 
+ 	getMugenDefStringOrDefault(file, tScript, "files", "anim", "");
+ 	assert(strcmp("", file));

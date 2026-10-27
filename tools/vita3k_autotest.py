@@ -19,6 +19,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
 VITA3K = os.environ.get("VITA3K", r"C:\Users\issaa\Tools\Vita3K\Vita3K.exe")
 VFS = os.path.join(os.environ["APPDATA"], "Vita3K", "Vita3K")
 APP = os.path.join(VFS, "ux0", "app", "JFVT00001")
@@ -114,7 +115,8 @@ def main():
     args = [a for a in sys.argv[1:]]
     stage = args[args.index("--stage") + 1] if "--stage" in args else "stages/kfm.def"
     secs = int(args[args.index("--secs") + 1]) if "--secs" in args else 90
-    ids = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i - 1] not in ("--stage", "--secs"))]
+    shots = float(args[args.index("--shots") + 1]) if "--shots" in args else 0  # seconds between screenshots
+    ids = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or args[i - 1] not in ("--stage", "--secs", "--shots"))]
     p1 = ids[0]
     p2 = ids[1] if len(ids) > 1 else p1
     os.makedirs(DATA, exist_ok=True)
@@ -133,9 +135,19 @@ def main():
     hide_window(p.pid)
     loaded_at = None
     log = ""
+    shot_dir = os.path.join(ROOT, "reports", "vita3k", "autotest", f"{p1}_vs_{p2}")
+    if shots:
+        import shutil
+        import soak_test
+        shutil.rmtree(shot_dir, ignore_errors=True)
+        os.makedirs(shot_dir)
+    next_shot = 0
     try:
         while time.time() - start < 300 + secs:
-            time.sleep(2)
+            time.sleep(1 if shots else 2)
+            if shots and loaded_at and time.time() >= next_shot:
+                soak_test.shot(p.pid, os.path.join(shot_dir, f"{int(time.time() - loaded_at):03d}s.png"))
+                next_shot = time.time() + shots
             log = open(LOG, encoding="latin-1", errors="replace").read() if os.path.exists(LOG) else ""
             if loaded_at is None and "[JFV] load rest" in log:
                 loaded_at = time.time()
