@@ -12,14 +12,14 @@ games:
   * one angular italic typeface everywhere (tools/ui/glyphs.py), outlined for contrast
   * Jump Force colours: deep navy panels, orange/yellow accents, P1 cyan, P2 red
 
-Everything is drawn here (no third-party art). Sprites are SFF v1 / PCX, 8-bit, 320x240
-space, so they cost little texture memory on the Vita (the whole HUD is under 1 MB).
+Everything is drawn here (no third-party art). Sprites are SFF v1 / PCX, 8-bit, drawn at 2x
+and run in 640x480 space (see K below); all motif sprites together are under 1 MB.
 
     python tools/make_ui.py            # after build_assets.py: writes build/game/assets/data/jfv
     python tools/make_ui.py --preview  # also writes ui-work/preview-*.png mock-ups
 
-Output: data/jfv/{system.def, system.sff, fight.def, fight.sff, + stock snd/fx copies},
-font/jfv_*.fnt, and mugen.cfg `motif = data/jfv/system.def`.
+Output: data/jfv/{system.def, system.sff, fight.def}, data/480p/{fight.def, fight.sff,
+fightfx.sff, fightfx.air}, font/jfv_*.fnt, and mugen.cfg `motif = data/jfv/system.def`.
 """
 import os
 import re
@@ -35,6 +35,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "build", "game", "assets")
 DATA = os.path.join(ASSETS, "data")
 OUT = os.path.join(DATA, "jfv")
+P480 = os.path.join(DATA, "480p")
 
 NAVY = (9, 13, 28)
 PANEL = (17, 23, 43)
@@ -46,11 +47,20 @@ P1C = (40, 190, 255)
 P2C = (255, 56, 88)
 WHITE = (255, 255, 255)
 SS = 4  # supersampling for slanted edges
+# Art is drawn at K pixels per 320x240 unit and the motif runs in 640x480 space (system.def
+# localcoord, data/480p/fight.def), so the UI is twice as sharp as the 320x240 game screen.
+# Shapes and layout below are written in 320-space units; only the raster is K times finer.
+K = 2
 
 
 # ---------------------------------------------------------------- drawing helpers
+def px(v):
+    """320-space units -> pixels of K-scale art."""
+    return int(round(v * K))
+
+
 def canvas(w, h, bg=(0, 0, 0, 0)):
-    return Image.new("RGBA", (w * SS, h * SS), bg)
+    return Image.new("RGBA", (px(w) * SS, px(h) * SS), bg)
 
 
 def done(img):
@@ -58,7 +68,12 @@ def done(img):
 
 
 def poly(d, pts, fill):
-    d.polygon([(x * SS, y * SS) for x, y in pts], fill=fill)
+    d.polygon([(x * K * SS, y * K * SS) for x, y in pts], fill=fill)
+
+
+def text(s, cap, ow=1, **kw):
+    """glyphs.text with cap height and outline in 320-space units."""
+    return glyphs.text(s, cap * K, ow=ow * K, **kw)
 
 
 def para(x, y, w, h, s):
@@ -67,6 +82,7 @@ def para(x, y, w, h, s):
 
 
 def vgrad(w, h, top, bottom, stops=None):
+    w, h = px(w), px(h)
     img = Image.new("RGB", (w, h))
     d = ImageDraw.Draw(img)
     for yy in range(h):
@@ -81,7 +97,7 @@ def vgrad(w, h, top, bottom, stops=None):
 
 def masked(fill_img, shape_pts, size):
     """Fill image cut to a polygon (anti-aliased, then hard-thresholded for 8-bit)."""
-    w, h = size
+    w, h = px(size[0]), px(size[1])
     m = Image.new("L", (w * SS, h * SS), 0)
     poly(ImageDraw.Draw(m), shape_pts, 255)
     m = m.resize((w, h), Image.Resampling.LANCZOS)
@@ -90,8 +106,15 @@ def masked(fill_img, shape_pts, size):
     return out
 
 
+def upscale(s):
+    """A stock 320-space sprite at K scale (nearest: keeps its pixel look and palette)."""
+    w, h = s.image.size
+    return sff1.Sprite(s.group, s.item, s.ax * K, s.ay * K, s.image.resize((w * K, h * K), Image.NEAREST))
+
+
 def spr(img, ax, ay, g, i):
-    return sff1.from_rgba(img, ax, ay, g, i)
+    """Axis (ax, ay) in pixels of the image."""
+    return sff1.from_rgba(img, int(round(ax)), int(round(ay)), g, i)
 
 
 # ---------------------------------------------------------------- fonts
@@ -106,9 +129,15 @@ FONTS = {  # file: (cap px, kwargs)
 
 
 def make_fonts():
+    """Each font at K scale (jfv_m.fnt) and at 1x (jfv_m1.fnt). Some engine texts ignore the
+    motif's coordinate space and draw fonts at 1 font px = 1 screen px: select-screen title,
+    names and stage (characterselectscreen.cpp:857,896), and fight texts made by
+    playDisplayText or addMugenTextMugenStyle (timer, round/KO/win, combo, win counter).
+    Those use the 1x fonts so they keep their size."""
     fd = os.path.join(ASSETS, "font")
     for name, (cap, kw) in FONTS.items():
-        glyphs.write_fnt(os.path.join(fd, name), cap, **kw)
+        for k, out in ((K, name), (1, name.replace(".fnt", "1.fnt"))):
+            glyphs.write_fnt(os.path.join(fd, out), cap * k, **dict(kw, ow=kw.get("ow", 1) * k, gap=kw.get("gap", 1) * k))
 
 
 # ---------------------------------------------------------------- fight HUD
@@ -120,7 +149,7 @@ POW_Y = 226
 
 def bar_sprite(w, h, s, fill, g, i, ax_pad=0):
     img = masked(fill, para(0, 0, w, h, s), (w, h))
-    return spr(img, w - 1, 0, g, i)
+    return spr(img, px(w) - 1, 0, g, i)
 
 
 def life_frame(accent, g):
@@ -130,7 +159,7 @@ def life_frame(accent, g):
     poly(d, para(0, 0, w, h - 1, LIFE_S + 1), (*EDGE, 255))
     poly(d, para(1.4, 1.2, w - 2.8, h - 3.4, LIFE_S), (*NAVY, 255))
     poly(d, para(0, h - 2.2, w - 6, 2.2, 0.8), (*accent, 255))  # team colour underline
-    return spr(done(c), LIFE_W + 3, 2, g, 0)
+    return spr(done(c), px(LIFE_W + 3), px(2), g, 0)
 
 
 def pow_frame(accent, g):
@@ -144,7 +173,7 @@ def pow_frame(accent, g):
     for k in (1, 2):  # level ticks at 1/3 and 2/3
         x = chip + 3 + POW_W * k / 3
         poly(d, [(x, 1), (x + 1, 1), (x - 1, h - 1), (x - 2, h - 1)], (*EDGE, 255))
-    return spr(done(c), POW_W + 2, 2, g, 0)
+    return spr(done(c), px(POW_W + 2), px(2), g, 0)
 
 
 def face_frame(accent, g):
@@ -163,7 +192,7 @@ def timer_badge():
     hexa = lambda m: [(6 + m, m), (w - 6 - m, m), (w - m, h / 2), (w - 6 - m, h - m), (6 + m, h - m), (m, h / 2)]
     poly(d, hexa(0), (*ORANGE, 255))
     poly(d, hexa(1.6), (*NAVY, 255))
-    return spr(done(c), w // 2, h // 2, 120, 0)
+    return spr(done(c), px(w / 2), px(h / 2), 120, 0)
 
 
 def pip(color, g, letter=None):
@@ -172,12 +201,12 @@ def pip(color, g, letter=None):
     d = ImageDraw.Draw(c)
     poly(d, [(3.5, 0), (7, 3.5), (3.5, 7), (0, 3.5)], (0, 0, 0, 255))
     poly(d, [(3.5, 1), (6, 3.5), (3.5, 6), (1, 3.5)], (*color, 255))
-    return spr(done(c), 3, 3, g, 0)
+    return spr(done(c), px(3.5), px(3.5), g, 0)
 
 
 def big_word(word, cap, flash=False):
     grad = ((255, 255, 255), (255, 255, 230)) if flash else ((255, 246, 180), ORANGE)
-    return glyphs.text(word, cap, gradient=grad, outline=(20, 8, 0), ow=2)
+    return text(word, cap, gradient=grad, outline=(20, 8, 0), ow=2)
 
 
 def squash(img, fx, fy):
@@ -235,7 +264,9 @@ def fight_sprites():
 
 
 FIGHT_KEYS = {
-    "files": {"font1": "jfv_m.fnt", "font2": "jfv_num.fnt", "font3": "jfv_s.fnt", "font4": "jfv_l.fnt", "font5": "jfv_mhi.fnt", "font6": "jfv_time.fnt"},
+    # fonts 2, 4, 6, 7, 8 are 1x: the texts using them are not scaled by the engine (make_fonts)
+    "files": {"font1": "jfv_m.fnt", "font2": "jfv_num1.fnt", "font3": "jfv_s.fnt", "font4": "jfv_l1.fnt", "font5": "jfv_mhi.fnt",
+              "font6": "jfv_time1.fnt", "font7": "jfv_m1.fnt", "font8": "jfv_s1.fnt"},
     "lifebar": {
         "p1.pos": f"{P1_LIFE_X},{LIFE_Y}", "p1.range.x": f"0,-{LIFE_W - 1}",
         "p2.pos": f"{P2_LIFE_X},{LIFE_Y}", "p2.range.x": f"0,{LIFE_W - 1}", "p2.bg1.spr": "14,0",
@@ -253,11 +284,11 @@ FIGHT_KEYS = {
     "name": {"p1.pos": "36,29", "p1.name.font": "3,0,1", "p2.pos": "284,29", "p2.name.font": "3,0,-1"},
     "time": {"pos": "160,17", "bg.spr": "120,0", "bg.offset": "0,-9", "counter.font": "6,0,0"},
     "winicon": {"p1.pos": "141,25", "p2.pos": "179,25", "p1.iconoffset": "-9,0", "p2.iconoffset": "9,0",
-                "p1.counter.font": "3,0", "p2.counter.font": "3,0"},
+                "p1.counter.font": "8,0", "p2.counter.font": "8,0"},
     "combo": {
-        "team1.pos": "10,90", "team1.start.x": "-90", "team2.start.x": "410", "team1.counter.font": "2,5,1", "team1.text.text": "HITS", "team1.text.font": "1,0,1",
+        "team1.pos": "10,90", "team1.start.x": "-90", "team2.start.x": "410", "team1.counter.font": "2,5,1", "team1.text.text": "HITS", "team1.text.font": "7,0,1",
         "team1.text.offset": "4,0",
-        "team2.pos": "309,90", "team2.counter.font": "2,5,-1", "team2.text.text": "HITS", "team2.text.font": "1,0,-1",
+        "team2.pos": "309,90", "team2.counter.font": "2,5,-1", "team2.text.text": "HITS", "team2.text.font": "7,0,-1",
         "team2.text.offset": "4,0",
     },
     "round": {
@@ -297,24 +328,23 @@ def backdrop(w=320, h=240, tint=(0, 0, 0)):
         poly(d, [(0, k), (w, k), (w, k + 0.6), (0, k + 0.6)], (255, 255, 255, 6))
     bg.alpha_composite(done(c))
     if tint != (0, 0, 0):
-        bg.alpha_composite(Image.new("RGBA", (w, h), tint + (40,)))
+        bg.alpha_composite(Image.new("RGBA", bg.size, tint + (40,)))
     return bg
 
 
 def logo():
-    jf = glyphs.text("JUMP FORCE", 30, gradient=((255, 250, 210), (255, 132, 24)), outline=(24, 8, 0), ow=2)
-    vt = glyphs.text("VITA", 12, fill=WHITE, outline=None, ow=0)
-    w = jf.size[0] + 6
-    tag_w, tag_h = vt.size[0] + 16, vt.size[1] + 6
-    h = jf.size[1] + tag_h + 2
-    c = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    c.paste(jf, (0, 0), jf)
+    jf = text("JUMP FORCE", 30, gradient=((255, 250, 210), (255, 132, 24)), outline=(24, 8, 0), ow=2)
+    vt = text("VITA", 12, fill=WHITE, outline=None, ow=0)
+    tag_w, tag_h = vt.size[0] / K + 16, vt.size[1] / K + 6  # units
     tag = canvas(tag_w, tag_h)
     d = ImageDraw.Draw(tag)
     poly(d, para(0, 0, tag_w, tag_h, 5), (*P2C, 255))
     tag = done(tag)
-    tag.paste(vt, ((tag_w - vt.size[0]) // 2, 3), vt)
-    c.paste(tag, (w - tag_w - 4, jf.size[1] + 1), tag)
+    tag.paste(vt, ((tag.size[0] - vt.size[0]) // 2, px(3)), vt)
+    w = jf.size[0] + px(6)
+    c = Image.new("RGBA", (w, jf.size[1] + tag.size[1] + px(2)), (0, 0, 0, 0))
+    c.paste(jf, (0, 0), jf)
+    c.paste(tag, (w - tag.size[0] - px(4), jf.size[1] + px(1)), tag)
     return c
 
 
@@ -326,13 +356,6 @@ def menu_panel():
     poly(d, para(10, 0, w - 10, 2, 0.4), (*ORANGE, 255))
     poly(d, para(0, h - 2, w - 12, 2, 0.4), (*EDGE, 255))
     return done(c)
-
-
-def footer(text):
-    t = glyphs.text(text, 5, fill=(150, 165, 200), outline=None, ow=0)
-    c = Image.new("RGBA", (320, 11), (5, 7, 15, 255))
-    c.paste(t, ((320 - t.size[0]) // 2, 3), t)
-    return c
 
 
 def header(w=320, h=22):
@@ -385,8 +408,8 @@ def cell(random_cell=False):
     poly(d, [(3.5, 1), (w - 1, 1), (w - 1, h - 3.5), (w - 3.5, h - 1), (1, h - 1), (1, 3.5)], (*PANEL2, 255))
     img = done(c)
     if random_cell:
-        q = glyphs.text("?", 14, gradient=((255, 240, 150), ORANGE), ow=1)
-        img.paste(q, ((w - q.size[0]) // 2, (h - q.size[1]) // 2), q)
+        q = text("?", 14, gradient=((255, 240, 150), ORANGE), ow=1)
+        img.paste(q, ((img.size[0] - q.size[0]) // 2, (img.size[1] - q.size[1]) // 2), q)
     return img
 
 
@@ -402,13 +425,13 @@ def cursor(accent, label, filled):
     img = done(c)
     # clear the inside properly (polygon with alpha 0 doesn't erase)
     inner = Image.new("L", img.size, 0)
-    ImageDraw.Draw(inner).rectangle([int(t) + 1, o + int(t) + 1, w - int(t) - 2, h - int(t) - 2], fill=255)
+    ImageDraw.Draw(inner).rectangle([px(t) + 1, px(o + t) + 1, px(w - t) - 2, px(h - t) - 2], fill=255)
     img.paste((0, 0, 0, 0), mask=inner)
-    x = 3
+    x = px(3)
     for ch in label:  # one glyph at a time: at this size the italic "1" runs into the "P"
-        g = glyphs.text(ch, 7, fill=(8, 10, 20), outline=None, ow=0, stroke=1.6)
-        img.paste(g, (x, 1), g)
-        x += g.size[0] + 1
+        g = text(ch, 7, fill=(8, 10, 20), outline=None, ow=0, stroke=1.6)
+        img.paste(g, (x, px(1)), g)
+        x += g.size[0] + px(1)
     return img
 
 
@@ -436,7 +459,7 @@ def portrait_frame(accent, w=124, h=144):
 
 def vs_logo(flash=False):
     grad = ((255, 255, 255), (255, 255, 235)) if flash else ((255, 250, 200), ORANGE)
-    return glyphs.text("VS", 34, gradient=grad, outline=(24, 8, 0), ow=2, stroke=1.5)
+    return text("VS", 34, gradient=grad, outline=(24, 8, 0), ow=2, stroke=1.5)
 
 
 def system_sprites(grid):
@@ -445,7 +468,7 @@ def system_sprites(grid):
     s.append(spr(speed_lines(320, 240, (255, 140, 40)), 0, 0, 1001, 0))
     lg = logo()
     s.append(spr(lg, lg.size[0] // 2, 0, 1002, 0))
-    s.append(spr(menu_panel(), 85, 0, 1003, 0))
+    s.append(spr(menu_panel(), px(85), 0, 1003, 0))
     # select
     s.append(spr(backdrop(), 0, 0, 1100, 0))
     s.append(spr(grid_panel(grid["cols"] * 29 + 8, grid["rows"] * 29 + 8), 0, 0, 1101, 0))
@@ -454,10 +477,10 @@ def system_sprites(grid):
     s.append(spr(side_panel(P2C, True), 0, 0, 1104, 0))
     s.append(spr(name_plate(P1C, False), 0, 0, 1105, 0))
     s.append(spr(name_plate(P2C, True), 0, 0, 1106, 0))
-    s.append(spr(cell(), 1, 1, 150, 0))
-    s.append(spr(cell(True), 1, 1, 151, 0))
+    s.append(spr(cell(), px(1), px(1), 150, 0))
+    s.append(spr(cell(True), px(1), px(1), 151, 0))
     for g, col, lab, fill in ((160, P1C, "1P", False), (161, P1C, "1P", True), (170, P2C, "2P", False), (171, P2C, "2P", True)):
-        s.append(spr(cursor(col, lab, fill), 3, 13, g, 0))
+        s.append(spr(cursor(col, lab, fill), px(3), px(13), g, 0))
     # VS
     s.append(spr(vs_backdrop(), 0, 0, 1200, 0))
     s.append(spr(portrait_frame(P1C), 0, 0, 1201, 0))
@@ -509,18 +532,21 @@ VS_BG = (bg("VersusBGdef", bgclearcolor="0,0,0")
 
 SYSTEM_KEYS = {
     "files": {"font1": "font/jfv_s.fnt", "font2": "font/jfv_m.fnt", "font3": "font/jfv_m.fnt", "font4": "font/jfv_mhi.fnt",
-              "font5": "font/jfv_l.fnt"},
+              "font5": "font/jfv_l.fnt", "font6": "font/jfv_m1.fnt", "font7": "font/jfv_mhi1.fnt"},  # 6, 7: 1x (make_fonts)
     "title info": {"menu.pos": "160,154", "menu.item.font": "3,0,0", "menu.item.active.font": "4,0,0",
                    "menu.item.spacing": "0,14", "menu.boxcursor.coords": "-62,-13,61,1",
-                   "menu.window.margins.y": "14,-3", "menu.window.visibleitems": "5"},
-    "select info": {"title.offset": "160,15", "title.font": "4,0,0",
+                   # outside 320 space the engine shows one extra item (titlescreen.cpp:261): the
+                   # bottom margin takes it back (tuned by screenshot)
+                   "menu.window.margins.y": "14,0", "menu.window.visibleitems": "5"},
+    "select info": {"title.offset": "160,15", "title.font": "7,0,0",
                     "p1.face.offset": "20,22", "p2.face.offset": "299,22",
                     "p1.face.scale": "0.75,0.75", "p2.face.scale": "0.75,0.75",
-                    "p1.name.offset": "16,131", "p1.name.font": "3,0,1",
-                    "p2.name.offset": "304,131", "p2.name.font": "3,0,-1",
-                    "stage.pos": "160,40", "stage.active.font": "4,0,0", "stage.active2.font": "3,0,0",
-                    "stage.done.font": "4,0,0"},
-    "vs screen": {"p1.pos": "20,31", "p2.pos": "299,31", "p1.name.pos": "80,192", "p1.name.font": "1,0,0",
+                    "p1.name.offset": "16,131", "p1.name.font": "6,0,1",
+                    "p2.name.offset": "304,131", "p2.name.font": "6,0,-1",
+                    "stage.pos": "160,40", "stage.active.font": "7,0,0", "stage.active2.font": "6,0,0",
+                    "stage.done.font": "7,0,0"},
+    "vs screen": {"p1.scale": f"{K},{K}", "p2.scale": f"{K},{K}",  # scaled by 320/640 like a position
+                  "p1.pos": "20,31", "p2.pos": "299,31", "p1.name.pos": "80,192", "p1.name.font": "1,0,0",
                   "p2.name.pos": "240,192", "p2.name.font": "1,0,0"},
 }
 
@@ -563,13 +589,45 @@ def replace_sections(text, prefix, new):
     return text2[:pos] + new + text2[pos:]
 
 
+COORD_KEY = re.compile(r"(^|\.)(pos|offset|iconoffset|spacing|range\.x|range|window|margins(\.y)?|coords|size|start|start\.x|velocity)$", re.I)
+FRAME = re.compile(r"^(\s*-?\d+\s*,\s*-?\d+\s*,\s*)(-?[\d.]+)(\s*,\s*)(-?[\d.]+)(\s*,.*)$")
+
+
+def fmt(x):
+    return str(int(x)) if x == int(x) else str(round(x, 3))
+
+
+def to_k_space(text):
+    """320-space def -> K x 320 space: coordinate keys and animation frame offsets times K.
+    Everything else (sprite numbers, fonts, times, scales) is left alone."""
+    out, in_action = [], False
+    for line in text.split("\n"):
+        if re.match(r"\s*\[", line):
+            in_action = bool(re.match(r"(?i)\s*\[\s*begin action", line))
+            out.append(line)
+            continue
+        if in_action:
+            m = FRAME.match(line)
+            if m:
+                line = m.group(1) + fmt(float(m.group(2)) * K) + m.group(3) + fmt(float(m.group(4)) * K) + m.group(5)
+            out.append(line)
+            continue
+        m = re.match(r"(\s*([A-Za-z0-9._]+)\s*=\s*)([^;]*)(.*)$", line)
+        if m and COORD_KEY.search(m.group(2)):
+            parts = [x.strip() for x in m.group(3).split(",")]
+            if all(re.fullmatch(r"-?\d+(\.\d+)?", x) for x in parts):
+                line = m.group(1) + ",".join(fmt(float(x) * K) for x in parts) + (" " if m.group(4) else "") + m.group(4)
+        out.append(line)
+    return "\n".join(out)
+
+
 def build_fight(stock):
     t = stock
     for sec, kv in FIGHT_KEYS.items():
         t = set_keys(t, sec, kv)
     # the darkened backgrounds were subtractive (trans S); draw them opaque
     t = re.sub(r"(?im)^(\s*(?:10|20|40),0,\s*0,0,\s*1),\s*,\s*S\s*$", r"\1", t)
-    return t
+    return to_k_space(t)
 
 
 def grid_of(sysdef):
@@ -588,8 +646,9 @@ def build_system(stock):
     g = grid_of(stock)
     t = replace_sections(t, "SelectBG", SELECT_BG.replace("{gx},{gy}", f"{g['x'] - 5 - 160},{g['y'] - 5}"))
     t = replace_sections(t, "VersusBG", VS_BG)
-    t = re.sub(r"(?im)^(\s*)(fight|spr|snd)(\s*=\s*)(fight\.def|system\.sff|system\.snd)", r"\1\2\3\4", t)
-    return t
+    t = to_k_space(t)
+    t = set_keys(t, "select info", {"title.offset": SYSTEM_KEYS["select info"]["title.offset"]})  # read untransformed (characterselectscreen.cpp:471)
+    return set_keys(t, "info", {"localcoord": f"{320 * K},{240 * K}"})
 
 
 def preview(sprites, name):
@@ -618,13 +677,23 @@ def main():
     ss = system_sprites(grid_of(read(os.path.join(DATA, "system.def"))))
     # keep any stock fight sprite we didn't redraw (e.g. team-mode bars), under the new ones
     mine = {(s.group, s.item) for s in fs}
-    stock_fight = [s for s in sff1.read(os.path.join(DATA, "fight.sff")) if (s.group, s.item) not in mine]
-    sff1.write(os.path.join(OUT, "fight.sff"), fs + stock_fight)
+    stock_fight = [upscale(s) for s in sff1.read(os.path.join(DATA, "fight.sff")) if (s.group, s.item) not in mine]
+    # The fight HUD only runs in 640 space from data/480p/fight.def (fightui.cpp:524). Hit
+    # sparks are drawn in that space too, so they get a K-scale copy of the stock fightfx.
+    os.makedirs(P480, exist_ok=True)
+    sff1.write(os.path.join(P480, "fight.sff"), fs + stock_fight)
+    sff1.write(os.path.join(P480, "fightfx.sff"), [upscale(s) for s in sff1.read(os.path.join(DATA, "fightfx.sff"))])
+    write(os.path.join(P480, "fightfx.air"), to_k_space(read(os.path.join(DATA, "fightfx.air"))))
+    fight = build_fight(read(os.path.join(DATA, "fight.def")))
+    write(os.path.join(P480, "fight.def"), fight)
+    write(os.path.join(OUT, "fight.def"), fight)  # the motif's own fight.def is where fonts load from (config.cpp:383)
+    stale = os.path.join(OUT, "fight.sff")
+    if os.path.exists(stale):
+        os.remove(stale)
     sff1.write(os.path.join(OUT, "system.sff"), ss)
-    write(os.path.join(OUT, "fight.def"), build_fight(read(os.path.join(DATA, "fight.def"))))
     write(os.path.join(OUT, "system.def"), build_system(read(os.path.join(DATA, "system.def"))))
-    # sounds, fight fx and select.def are not copied: the engine falls back to data/ for any
-    # file missing from the motif folder (config.cpp findMugenSystemOrFightFilePath)
+    # sounds and select.def are not copied: the engine falls back to data/ for any file
+    # missing from the motif folder (config.cpp findMugenSystemOrFightFilePath)
     cfg = os.path.join(DATA, "mugen.cfg")
     t = read(cfg)
     t = re.sub(r"(?im)^(\s*motif\s*=\s*)[^;\n]*", r"\1data/jfv/system.def", t)
@@ -632,7 +701,8 @@ def main():
     if "--preview" in sys.argv:
         preview(fs, "fight")
         preview(ss, "system")
-    kb = sum(os.path.getsize(os.path.join(OUT, f)) for f in ("fight.sff", "system.sff")) // 1024
+    kb = sum(os.path.getsize(f) for f in (os.path.join(P480, "fight.sff"), os.path.join(P480, "fightfx.sff"),
+                                           os.path.join(OUT, "system.sff"))) // 1024
     print(f"jfv motif -> {os.path.relpath(OUT, ROOT)} ({len(fs)} fight + {len(ss)} system sprites, {kb} KB)")
 
 

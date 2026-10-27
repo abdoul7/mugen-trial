@@ -39,8 +39,32 @@ layout change.
   - "ROUND n", "FIGHT!" and "K.O." (same animation timings as stock), plus DOUBLE K.O.,
     TIME OVER, "x WINS" and DRAW
 
-Sprites are SFF v1 / 8-bit PCX (`tools/ui/sff1.py`). Both files total about 200 KB, so they
-need almost no texture memory on the Vita. The old darkened bar backgrounds were subtractive
+Sprites are SFF v1 / 8-bit PCX (`tools/ui/sff1.py`).
+
+### 640x480 space (sharper on the Vita)
+
+The engine's logical screen is 320x240 (`main.cpp:71`), and the Vita shows it about 2.27x
+(544/240). Art made in 320 space is therefore drawn about 2.27x on the Vita, which looks
+blocky. The motif is now drawn at 2x (`K` in `make_ui.py`) and runs in 640x480 space, so
+UI art is drawn at about 1.13x and text and edges look sharp:
+
+- `system.def` has `localcoord = 640,480`.
+- The fight HUD is in `data/480p/fight.def`, the only way to get 640 space for the fight
+  (`fightui.cpp:524`). The same file goes in `data/jfv/fight.def`, because fight fonts load
+  from the motif's own fight.def (`config.cpp:383`).
+- Hit sparks are drawn in the HUD's space, so `data/480p` gets a 2x copy of the stock
+  fightfx. Stock fight sprites we don't redraw are also 2x (nearest-neighbour).
+- Layouts are still written in 320 units. `to_k_space()` doubles every coordinate key and
+  every animation frame offset.
+- Engine quirk: some texts ignore the coordinate space and draw fonts 1:1 on the 320 screen:
+  - select-screen title, names and stage text
+  - fight timer, round/KO/win text, combo and win counter
+
+  Those use 1x fonts (`jfv_*1.fnt`). Select `title.offset` is read untransformed, so it stays
+  in 320 units.
+
+Sprite files total about 760 KB, still small next to one character's sprites. Before and
+after screenshots of the HUD were compared on the Windows build. The old darkened bar backgrounds were subtractive
 (`trans = S`); they are now opaque.
 
 ## Verified (2026-10-27)
