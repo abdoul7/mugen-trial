@@ -1,0 +1,461 @@
+diff --git a/prism/filereader.cpp b/prism/filereader.cpp
+index f402fde..a9269e4 100644
+--- a/prism/filereader.cpp
++++ b/prism/filereader.cpp
+@@ -1,178 +1,233 @@
+-#include <prism/system.h>
+-#include "prism/filereader.h"
+-
+-#include "prism/memoryhandler.h"
+-
+-namespace prism {
+-
+-	typedef struct {
+-		Buffer b;
+-		BufferPointer p;
+-
+-		int mIsOver;
+-	} MugenSpriteFileBufferReaderData;
+-
+-	static void initBufferReader(FileReader* tReader, const char* tPath) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)allocMemory(sizeof(MugenSpriteFileBufferReaderData));
+-		data->b = fileToBuffer(tPath);
+-		data->p = getBufferPointer(data->b);
+-		data->mIsOver = 0;
+-		tReader->mData = data;
+-	}
+-
+-	static void deleteBufferReader(FileReader* tReader) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		freeBuffer(data->b);
+-		freeMemory(data);
+-	}
+-
+-	static void readBufferReader(FileReader* tReader, void* tDst, uint32_t tSize) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		readFromBufferPointer(tDst, &data->p, tSize);
+-	}
+-
+-	static void seekBufferReader(FileReader* tReader, uint32_t tPosition) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		data->p = ((char*)data->b.mData) + tPosition;
+-
+-		if (data->p >= ((char*)data->b.mData) + data->b.mLength) {
+-			tReader->mSetOver(tReader);
+-		}
+-	}
+-
+-	static Buffer readBufferReaderBuffer(FileReader* tReader, uint32_t tSize) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		return makeBuffer(data->p, tSize);
+-	}
+-
+-	static uint32_t getCurrentBufferReaderOffset(FileReader* tReader) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		return (uint32_t)(data->p - ((char*)data->b.mData));
+-	}
+-
+-	static void setBufferReaderOver(FileReader* tReader) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		data->p = NULL;
+-		data->mIsOver = 1;
+-	}
+-
+-	static int isBufferReaderOver(FileReader* tReader) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
+-		return data->mIsOver;
+-	}
+-
+-	FileReader getBufferFileReader() {
+-		FileReader ret;
+-		ret.mType = FILE_READER_TYPE_BUFFER;
+-		ret.mInit = initBufferReader;
+-		ret.mRead = readBufferReader;
+-		ret.mReadBufferReadOnly = readBufferReaderBuffer;
+-		ret.mSeek = seekBufferReader;
+-		ret.mGetCurrentOffset = getCurrentBufferReaderOffset;
+-		ret.mDelete = deleteBufferReader;
+-		ret.mSetOver = setBufferReaderOver;
+-		ret.mIsOver = isBufferReaderOver;
+-		return ret;
+-	}
+-
+-	typedef struct {
+-		FileHandler mFile;
+-		uint32_t mFileSize;
+-		int mIsOver;
+-	} MugenSpriteFileFileReaderData;
+-
+-	// [JFV] patch 0011: file-reader calls and time spent in them (read by mugenspritefilereader)
+-	uint64_t gJfvFileReaderTicks = 0;
+-	uint32_t gJfvFileReaderCalls = 0;
+-
+-	static void initFileReader(FileReader* tReader, const char* tPath) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)allocMemory(sizeof(MugenSpriteFileFileReaderData));
+-		data->mFile = fileOpen(tPath, O_RDONLY);
+-		data->mFileSize = uint32_t(fileTotal(data->mFile));
+-		data->mIsOver = 0;
+-		tReader->mData = data;
+-	}
+-
+-	static void deleteFileReader(FileReader* tReader) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-		fileClose(data->mFile);
+-		freeMemory(data);
+-	}
+-
+-	static void readFileReader(FileReader* tReader, void* tDst, uint32_t tSize) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-
+-		const uint64_t t0 = getSystemTicks();
+-		fileRead(data->mFile, tDst, tSize);
+-		gJfvFileReaderTicks += getSystemTicks() - t0;
+-		gJfvFileReaderCalls++;
+-	}
+-
+-	static void seekFileReader(FileReader* tReader, uint32_t tPosition) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-
+-		const uint64_t t0 = getSystemTicks();
+-		fileSeek(data->mFile, tPosition, SEEK_SET);
+-		gJfvFileReaderTicks += getSystemTicks() - t0;
+-		gJfvFileReaderCalls++;
+-		uint32_t position = tReader->mGetCurrentOffset(tReader);
+-
+-		if (position >= data->mFileSize) {
+-			tReader->mSetOver(tReader);
+-		}
+-	}
+-
+-	static Buffer readFileReaderBuffer(FileReader* tReader, uint32_t tSize) {
+-		(void)tReader;
+-		uint32_t originalPosition = tReader->mGetCurrentOffset(tReader);
+-		char* dst = (char*)allocMemory(tSize + 10);
+-		tReader->mRead(tReader, dst, tSize);
+-
+-		tReader->mSeek(tReader, originalPosition);
+-
+-		return makeBufferOwned(dst, tSize);
+-	}
+-
+-	static uint32_t getCurrentFileReaderOffset(FileReader* tReader) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-
+-		const uint64_t t0 = getSystemTicks();
+-		const uint32_t ret = (uint32_t)fileTell(data->mFile);
+-		gJfvFileReaderTicks += getSystemTicks() - t0;
+-		gJfvFileReaderCalls++;
+-		return ret;
+-	}
+-
+-	static void setFileReaderOver(FileReader* tReader) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-		data->mIsOver = 1;
+-	}
+-
+-	static int isFileReaderOver(FileReader* tReader) {
+-		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
+-		return data->mIsOver;
+-	}
+-
+-	FileReader getFileFileReader() {
+-		FileReader ret;
+-		ret.mType = FILE_READER_TYPE_FILE;
+-		ret.mInit = initFileReader;
+-		ret.mRead = readFileReader;
+-		ret.mReadBufferReadOnly = readFileReaderBuffer;
+-		ret.mSeek = seekFileReader;
+-		ret.mGetCurrentOffset = getCurrentFileReaderOffset;
+-		ret.mDelete = deleteFileReader;
+-		ret.mSetOver = setFileReaderOver;
+-		ret.mIsOver = isFileReaderOver;
+-		return ret;
+-	}
+-
+-	void initBufferFileReaderReadOnlyBuffer(FileReader* tReader, const Buffer& tBuffer) {
+-		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)allocMemory(sizeof(MugenSpriteFileBufferReaderData));
+-		data->b = tBuffer;
+-		data->p = getBufferPointer(data->b);
+-		data->mIsOver = 0;
+-		tReader->mData = data;
+-	}
+-
++#include <string.h>
++#include <prism/system.h>
++#include "prism/filereader.h"
++
++#include "prism/memoryhandler.h"
++
++namespace prism {
++
++	typedef struct {
++		Buffer b;
++		BufferPointer p;
++
++		int mIsOver;
++	} MugenSpriteFileBufferReaderData;
++
++	static void initBufferReader(FileReader* tReader, const char* tPath) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)allocMemory(sizeof(MugenSpriteFileBufferReaderData));
++		data->b = fileToBuffer(tPath);
++		data->p = getBufferPointer(data->b);
++		data->mIsOver = 0;
++		tReader->mData = data;
++	}
++
++	static void deleteBufferReader(FileReader* tReader) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		freeBuffer(data->b);
++		freeMemory(data);
++	}
++
++	static void readBufferReader(FileReader* tReader, void* tDst, uint32_t tSize) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		readFromBufferPointer(tDst, &data->p, tSize);
++	}
++
++	static void seekBufferReader(FileReader* tReader, uint32_t tPosition) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		data->p = ((char*)data->b.mData) + tPosition;
++
++		if (data->p >= ((char*)data->b.mData) + data->b.mLength) {
++			tReader->mSetOver(tReader);
++		}
++	}
++
++	static Buffer readBufferReaderBuffer(FileReader* tReader, uint32_t tSize) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		return makeBuffer(data->p, tSize);
++	}
++
++	static uint32_t getCurrentBufferReaderOffset(FileReader* tReader) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		return (uint32_t)(data->p - ((char*)data->b.mData));
++	}
++
++	static void setBufferReaderOver(FileReader* tReader) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		data->p = NULL;
++		data->mIsOver = 1;
++	}
++
++	static int isBufferReaderOver(FileReader* tReader) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)tReader->mData;
++		return data->mIsOver;
++	}
++
++	FileReader getBufferFileReader() {
++		FileReader ret;
++		ret.mType = FILE_READER_TYPE_BUFFER;
++		ret.mInit = initBufferReader;
++		ret.mRead = readBufferReader;
++		ret.mReadBufferReadOnly = readBufferReaderBuffer;
++		ret.mSeek = seekBufferReader;
++		ret.mGetCurrentOffset = getCurrentBufferReaderOffset;
++		ret.mDelete = deleteBufferReader;
++		ret.mSetOver = setBufferReaderOver;
++		ret.mIsOver = isBufferReaderOver;
++		return ret;
++	}
++
++	// [JFV] patch 0013: the streaming reader keeps a 256 KB read-ahead window. On a real Vita every
++	// fileRead/fileSeek/fileTell is a ~5 ms trip to the memory card, and the sprite loaders make
++	// thousands of small reads plus a seek/tell around each one. Seeks and tells are now free and
++	// small reads come out of the window; only window refills and large reads touch the card.
++	// Two windows (least recently used is refilled): SFF loaders alternate between the sprite index
++	// near the start of the file and the image data, which would keep evicting a single window.
++	static const uint32_t JFV_READ_WINDOW = 256 * 1024;
++	static const int JFV_READ_WINDOWS = 2;
++
++	// patch 0011 counters: card reads and the time spent in them (read by mugenspritefilereader)
++	uint64_t gJfvFileReaderTicks = 0;
++	uint32_t gJfvFileReaderCalls = 0;
++
++	typedef struct {
++		FileHandler mFile;
++		uint32_t mFileSize;
++		int mIsOver;
++		uint32_t mPosition; // logical read position
++		uint32_t mWindowStart[JFV_READ_WINDOWS];
++		uint32_t mWindowLength[JFV_READ_WINDOWS];
++		uint32_t mWindowUsed[JFV_READ_WINDOWS];
++		uint32_t mUseCounter;
++		uint8_t* mWindow[JFV_READ_WINDOWS];
++	} MugenSpriteFileFileReaderData;
++
++	static void initFileReader(FileReader* tReader, const char* tPath) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)allocMemory(sizeof(MugenSpriteFileFileReaderData));
++		data->mFile = fileOpen(tPath, O_RDONLY);
++		data->mFileSize = uint32_t(fileTotal(data->mFile));
++		data->mIsOver = 0;
++		data->mPosition = 0;
++		data->mUseCounter = 0;
++		for (int i = 0; i < JFV_READ_WINDOWS; i++) {
++			data->mWindowStart[i] = 0;
++			data->mWindowLength[i] = 0;
++			data->mWindowUsed[i] = 0;
++			data->mWindow[i] = (uint8_t*)allocMemory(JFV_READ_WINDOW);
++		}
++		tReader->mData = data;
++	}
++
++	static void deleteFileReader(FileReader* tReader) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		fileClose(data->mFile);
++		for (int i = 0; i < JFV_READ_WINDOWS; i++) freeMemory(data->mWindow[i]);
++		freeMemory(data);
++	}
++
++	static uint32_t jfvReadFromCard(MugenSpriteFileFileReaderData* data, void* tDst, uint32_t tPosition, uint32_t tSize) {
++		if (tPosition >= data->mFileSize) return 0;
++		if (tSize > data->mFileSize - tPosition) tSize = data->mFileSize - tPosition;
++		const uint64_t t0 = getSystemTicks();
++		fileSeek(data->mFile, tPosition, SEEK_SET);
++		const size_t got = fileRead(data->mFile, tDst, tSize);
++		gJfvFileReaderTicks += getSystemTicks() - t0;
++		gJfvFileReaderCalls += 2;
++		return (uint32_t)got;
++	}
++
++	static void readFileReader(FileReader* tReader, void* tDst, uint32_t tSize) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		uint8_t* dst = (uint8_t*)tDst;
++		while (tSize) {
++			int hit = -1;
++			for (int i = 0; i < JFV_READ_WINDOWS; i++) {
++				if (data->mPosition >= data->mWindowStart[i] && data->mPosition < data->mWindowStart[i] + data->mWindowLength[i]) { hit = i; break; }
++			}
++			if (hit >= 0) {
++				const uint32_t offset = data->mPosition - data->mWindowStart[hit];
++				uint32_t n = data->mWindowLength[hit] - offset;
++				if (n > tSize) n = tSize;
++				memcpy(dst, data->mWindow[hit] + offset, n);
++				data->mWindowUsed[hit] = ++data->mUseCounter;
++				dst += n;
++				data->mPosition += n;
++				tSize -= n;
++				continue;
++			}
++			if (tSize >= JFV_READ_WINDOW) { // big read: straight into the destination
++				const uint32_t got = jfvReadFromCard(data, dst, data->mPosition, tSize);
++				if (got < tSize) memset(dst + got, 0, tSize - got);
++				data->mPosition += tSize;
++				return;
++			}
++			int victim = 0;
++			for (int i = 1; i < JFV_READ_WINDOWS; i++) {
++				if (data->mWindowUsed[i] < data->mWindowUsed[victim]) victim = i;
++			}
++			data->mWindowStart[victim] = data->mPosition;
++			data->mWindowLength[victim] = jfvReadFromCard(data, data->mWindow[victim], data->mPosition, JFV_READ_WINDOW);
++			data->mWindowUsed[victim] = ++data->mUseCounter;
++			if (!data->mWindowLength[victim]) { // past the end of the file
++				memset(dst, 0, tSize);
++				data->mPosition += tSize;
++				return;
++			}
++		}
++	}
++
++	static void seekFileReader(FileReader* tReader, uint32_t tPosition) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		data->mPosition = tPosition;
++		if (tPosition >= data->mFileSize) {
++			tReader->mSetOver(tReader);
++		}
++	}
++
++	static Buffer readFileReaderBuffer(FileReader* tReader, uint32_t tSize) {
++		uint32_t originalPosition = tReader->mGetCurrentOffset(tReader);
++		char* dst = (char*)allocMemory(tSize + 10);
++		tReader->mRead(tReader, dst, tSize);
++
++		tReader->mSeek(tReader, originalPosition);
++
++		return makeBufferOwned(dst, tSize);
++	}
++
++	static uint32_t getCurrentFileReaderOffset(FileReader* tReader) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		return data->mPosition;
++	}
++
++	static void setFileReaderOver(FileReader* tReader) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		data->mIsOver = 1;
++	}
++
++	static int isFileReaderOver(FileReader* tReader) {
++		MugenSpriteFileFileReaderData* data = (MugenSpriteFileFileReaderData*)tReader->mData;
++		return data->mIsOver;
++	}
++
++	FileReader getFileFileReader() {
++		FileReader ret;
++		ret.mType = FILE_READER_TYPE_FILE;
++		ret.mInit = initFileReader;
++		ret.mRead = readFileReader;
++		ret.mReadBufferReadOnly = readFileReaderBuffer;
++		ret.mSeek = seekFileReader;
++		ret.mGetCurrentOffset = getCurrentFileReaderOffset;
++		ret.mDelete = deleteFileReader;
++		ret.mSetOver = setFileReaderOver;
++		ret.mIsOver = isFileReaderOver;
++		return ret;
++	}
++
++	void initBufferFileReaderReadOnlyBuffer(FileReader* tReader, const Buffer& tBuffer) {
++		MugenSpriteFileBufferReaderData* data = (MugenSpriteFileBufferReaderData*)allocMemory(sizeof(MugenSpriteFileBufferReaderData));
++		data->b = tBuffer;
++		data->p = getBufferPointer(data->b);
++		data->mIsOver = 0;
++		tReader->mData = data;
++	}
++
+ }
+\ No newline at end of file
+diff --git a/repo/fightscreen.cpp b/repo/fightscreen.cpp
+index d22b0b4..b044695 100644
+--- a/repo/fightscreen.cpp
++++ b/repo/fightscreen.cpp
+@@ -78,14 +78,32 @@ static void exitFightScreenCB(void* tCaller);
+ 
+ // [JFV] patch 0006: how long each part of loading a fight takes (debug log only)
+ static uint64_t gJfvLoadStart, gJfvLoadLast;
++static unsigned long long gJfvLoadSteps[5];
++static int gJfvLoadStepCount;
+ static void jfvLoadStep(const char* tStep) {
+ 	const uint64_t now = getSystemTicks();
++	if (gJfvLoadStepCount < 5) gJfvLoadSteps[gJfvLoadStepCount++] = (unsigned long long)((now - gJfvLoadLast) / 1000);
+ 	logFormat("[JFV] load %s: %llu ms (total %llu ms)", tStep, (unsigned long long)((now - gJfvLoadLast) / 1000), (unsigned long long)((now - gJfvLoadStart) / 1000));
+ 	gJfvLoadLast = now;
+ }
+ 
++// [JFV] patch 0013: one line per fight in ux0:data/JFVT00001/loadtimes.txt, in release builds too
++// (the debug log reopens its file for every line, which is far too slow on a real Vita)
++static void jfvWriteLoadTimes() {
++#ifdef VITA
++	FILE* f = fopen("ux0:data/JFVT00001/loadtimes.txt", "a");
++	if (!f) return;
++	fprintf(f, "%s vs %s: total %llu ms (setup %llu, stage %llu, scripts %llu, sprites %llu, rest %llu)\n",
++		getPlayerDisplayName(getRootPlayer(0)), getPlayerDisplayName(getRootPlayer(1)),
++		(unsigned long long)((getSystemTicks() - gJfvLoadStart) / 1000),
++		gJfvLoadSteps[0], gJfvLoadSteps[1], gJfvLoadSteps[2], gJfvLoadSteps[3], gJfvLoadSteps[4]);
++	fclose(f);
++#endif
++}
++
+ static void loadFightScreen() {
+ 	gJfvLoadStart = gJfvLoadLast = getSystemTicks();
++	gJfvLoadStepCount = 0;
+ 	setWrapperBetweenScreensCB(exitFightScreenCB, NULL);
+ 
+ 	logMemoryState();
+@@ -187,6 +205,7 @@ static void loadFightScreen() {
+ 	setPlayerStatemachineToUpdateAgain(getRootPlayer(0));
+ 	setPlayerStatemachineToUpdateAgain(getRootPlayer(1));
+ 	jfvLoadStep("rest");
++	jfvWriteLoadTimes();
+ 	logg("[Fightscreen] Fight screen loaded");
+ 
+ 	

@@ -1,0 +1,118 @@
+diff --git a/repo/fightscreen.cpp b/repo/fightscreen.cpp
+index 38d7e1f..f8406e5 100644
+--- a/repo/fightscreen.cpp
++++ b/repo/fightscreen.cpp
+@@ -76,7 +76,16 @@ extern int gPruneAmount;
+ 
+ static void exitFightScreenCB(void* tCaller);
+ 
++// [JFV] patch 0006: how long each part of loading a fight takes (debug log only)
++static uint64_t gJfvLoadStart, gJfvLoadLast;
++static void jfvLoadStep(const char* tStep) {
++	const uint64_t now = getSystemTicks();
++	logFormat("[JFV] load %s: %llu ms (total %llu ms)", tStep, (unsigned long long)((now - gJfvLoadLast) / 1000), (unsigned long long)((now - gJfvLoadStart) / 1000));
++	gJfvLoadLast = now;
++}
++
+ static void loadFightScreen() {
++	gJfvLoadStart = gJfvLoadLast = getSystemTicks();
+ 	setWrapperBetweenScreensCB(exitFightScreenCB, NULL);
+ 
+ 	logMemoryState();
+@@ -116,11 +125,13 @@ static void loadFightScreen() {
+ 	}
+ 	
+ 	logMemoryState();
++	jfvLoadStep("setup");
+ 	logg("init stage");
+ 
+ 	instantiateActor(getDreamStageBP());
+ 
+ 	logMemoryState();
++	jfvLoadStep("stage");
+ 	logg("init players");
+ 
+ 	loadPlayers(&gFightScreenData.mMemoryStack);
+@@ -135,6 +146,7 @@ static void loadFightScreen() {
+ 	instantiateActor(getFightResultDisplay());
+ 	
+ 	logMemoryState();
++	jfvLoadStep("players (scripts, animations, sounds)");
+ 	logg("shrinking memory stack");
+ 	resizeMemoryStackToCurrentSize(&gFightScreenData.mMemoryStack);
+ 	logMemoryState();
+@@ -142,6 +154,7 @@ static void loadFightScreen() {
+ 
+ 	logg("[Fightscreen] Load player sprites");
+ 	loadPlayerSprites();
++	jfvLoadStep("player sprites");
+ 	logg("[Fightscreen] Set ui faces");
+ 	setUIFaces();
+ 
+@@ -172,6 +185,7 @@ static void loadFightScreen() {
+ 	changePlayerState(getRootPlayer(1), 5900);
+ 	setPlayerStatemachineToUpdateAgain(getRootPlayer(0));
+ 	setPlayerStatemachineToUpdateAgain(getRootPlayer(1));
++	jfvLoadStep("rest");
+ 	logg("[Fightscreen] Fight screen loaded");
+ 
+ 	
+diff --git a/repo/initscreen.cpp b/repo/initscreen.cpp
+index c6f84f9..aa9db68 100644
+--- a/repo/initscreen.cpp
++++ b/repo/initscreen.cpp
+@@ -2,7 +2,54 @@
+ 
+ #include "intro.h"
+ 
++#ifdef VITA
++// [JFV] patch 0006: autotest. If ux0:data/JFVT00001/autotest.txt exists (lines: p1 .def path, p2 .def
++// path, stage .def path, all relative to the game folder, e.g. assets/chars/kefla/Kefla.def), skip the
++// menus, run that fight CPU vs CPU and quit when it ends. Used by tools/vita3k_autotest.py; without the
++// file nothing changes.
++#include <stdio.h>
++#include <string.h>
++#include <prism/log.h>
++#include <psp2/kernel/processmgr.h>
++#include "gamelogic.h"
++#include "fightscreen.h"
++#include "playerdefinition.h"
++#include "stage.h"
++
++static void jfvAutotestOver() {
++	logg("[JFV] autotest done");
++	sceKernelExitProcess(0);
++}
++
++static int jfvTryAutotest() {
++	FILE* f = fopen("ux0:data/JFVT00001/autotest.txt", "r");
++	if (!f) return 0;
++	char lines[3][512];
++	int n = 0;
++	while (n < 3 && fgets(lines[n], sizeof(lines[n]), f)) {
++		lines[n][strcspn(lines[n], "\r\n")] = '\0';
++		if (lines[n][0]) n++;
++	}
++	fclose(f);
++	if (n < 3) {
++		logWarning("[JFV] autotest.txt needs 3 lines: p1 def, p2 def, stage def");
++		return 0;
++	}
++	logFormat("[JFV] autotest: %s vs %s on %s", lines[0], lines[1], lines[2]);
++	setGameModeWatch();
++	setPlayerDefinitionPath(0, lines[0]);
++	setPlayerDefinitionPath(1, lines[1]);
++	char noMusic[2] = "";
++	setDreamStageMugenDefinition(lines[2], noMusic);
++	startFightScreen(jfvAutotestOver, jfvAutotestOver);
++	return 1;
++}
++#endif
++
+ static void loadInitScreen() {
++#ifdef VITA
++	if (jfvTryAutotest()) return;
++#endif
+ 	setNewScreen(startIntroFirstTimeAndReturnScreen());
+ }
+ 

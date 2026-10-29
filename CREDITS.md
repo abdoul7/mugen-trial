@@ -7,6 +7,8 @@ bundled for local use only and must not be redistributed (see `handoff/CLAUDE.md
 
 - **Dolmexica Infinite 1.8** by Captain Dreamcast / Dogma (2018–2026), MIT licence —
   https://github.com/CaptainDreamcast/DolmexicaInfinite · https://captaindreamcast.itch.io/dolmexica-infinite
+- The engine's own title-screen credit line (name, version, date/presenter) is removed by
+  our engine patch 0009 to make room for the menu; this file is where the engine is credited
 - Vita packaging tools `vita-mksfoex` / `vita-pack-vpk` from the vitasdk toolchain (shipped in the kit)
 - Stock Kung Fu Man, his stage and the stock motif: Elecbyte (as distributed with Dolmexica)
 

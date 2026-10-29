@@ -1,0 +1,407 @@
+diff --git a/repo/titlescreen.cpp b/repo/titlescreen.cpp
+index 195cbaf..8be9f52 100644
+--- a/repo/titlescreen.cpp
++++ b/repo/titlescreen.cpp
+@@ -1,6 +1,7 @@
+ #include "titlescreen.h"
+ 
+ #include <assert.h>
++#include <math.h>
+ 
+ #include <prism/animation.h>
+ #include <prism/screeneffect.h>
+@@ -47,6 +48,10 @@ typedef struct {
+ 	Position mOffset;
+ 
+ 	int mTextID;
++
++	char* mName; // JFV: item label and menu.itemdesc.<item> text, shown by the focus/description texts
++	char* mDescription;
++	float mSlide; // JFV: 0..1, eases toward 1 while the item is selected (menu.item.active.offset)
+ } MenuText;
+ 
+ typedef struct {
+@@ -70,6 +75,19 @@ typedef struct {
+ 	Vector3DI mCursorDoneSound;
+ 	Vector3DI mCancelSound;
+ 
++	// JFV menu extensions (all optional; without them the title screen behaves as stock)
++	float mEase; // menu.ease: fraction of the remaining distance covered per frame, 1 = snap
++	Vector3D mActiveOffset; // menu.item.active.offset: the selected item slides by this
++	int mCursorAnimation; // menu.cursor.anim: animated cursor drawn behind the selected item, replaces the box cursor
++	Position mCursorOffset; // menu.cursor.offset
++	int mHasFocusText; // menu.focus.pos / .font / .offset: selected item's name, slides in on change
++	Position mFocusPosition;
++	Vector3DI mFocusFont;
++	Vector3D mFocusSlideOffset;
++	int mHasDescriptionText; // menu.desc.pos / .font / .width: menu.itemdesc.<item> of the selected item
++	Position mDescriptionPosition;
++	Vector3DI mDescriptionFont;
++	float mDescriptionWidth;
+ } MenuHeader;
+ 
+ typedef struct {
+@@ -96,9 +114,12 @@ static struct {
+ 
+ 	Vector2DI mLocalCoord;
+ 	TextureData mWhiteTexture;
+-	AnimationHandlerElement* mCreditBGAnimationElement;
+-	int mLeftCreditTextID;
+-	int mRightCreditTextID;
++
++	MugenAnimationHandlerElement* mCursorElement;
++	Position mCursorPosition;
++	int mFocusTextID;
++	int mDescriptionTextID;
++	float mFocusSlide;
+ 
+ 	int mTopOption;
+ 	int mSelected;
+@@ -277,6 +298,22 @@ static void loadMenuHeader() {
+ 	gTitleScreenData.mHeader.mCursorMoveSound = getMugenDefVectorIOrDefault(&gTitleScreenData.mScript, "title info", "cursor.move.snd", Vector3DI(0, 0, 0));
+ 	gTitleScreenData.mHeader.mCursorDoneSound = getMugenDefVectorIOrDefault(&gTitleScreenData.mScript, "title info", "cursor.done.snd", Vector3DI(0, 0, 0));
+ 	gTitleScreenData.mHeader.mCancelSound = getMugenDefVectorIOrDefault(&gTitleScreenData.mScript, "title info", "cancel.snd", Vector3DI(0, 0, 0));
++
++	const auto localX = gTitleScreenData.mLocalCoord.x;
++	const auto screenX = getScreenSize().x;
++	gTitleScreenData.mHeader.mEase = getMugenDefFloatOrDefault(&gTitleScreenData.mScript, "title info", "menu.ease", 1.0f);
++	if (gTitleScreenData.mHeader.mEase <= 0.0f || gTitleScreenData.mHeader.mEase > 1.0f) gTitleScreenData.mHeader.mEase = 1.0f;
++	gTitleScreenData.mHeader.mActiveOffset = transformDreamCoordinatesVectorXY(getMugenDefVectorOrDefault(&gTitleScreenData.mScript, "title info", "menu.item.active.offset", Vector3D(0, 0, 0)), localX, screenX);
++	gTitleScreenData.mHeader.mCursorAnimation = getMugenDefIntegerOrDefault(&gTitleScreenData.mScript, "title info", "menu.cursor.anim", -1);
++	gTitleScreenData.mHeader.mCursorOffset = transformDreamCoordinatesVectorXY(getMugenDefVectorOrDefault(&gTitleScreenData.mScript, "title info", "menu.cursor.offset", Vector3D(0, 0, 0)), localX, screenX);
++	gTitleScreenData.mHeader.mHasFocusText = isMugenDefVectorVariable(&gTitleScreenData.mScript, "title info", "menu.focus.pos");
++	gTitleScreenData.mHeader.mFocusPosition = transformDreamCoordinatesVectorXY(getMugenDefVectorOrDefault(&gTitleScreenData.mScript, "title info", "menu.focus.pos", Vector3D(0, 0, 0)), localX, screenX);
++	gTitleScreenData.mHeader.mFocusFont = getMugenDefVectorIOrDefault(&gTitleScreenData.mScript, "title info", "menu.focus.font", Vector3DI(-1, 0, 0));
++	gTitleScreenData.mHeader.mFocusSlideOffset = transformDreamCoordinatesVectorXY(getMugenDefVectorOrDefault(&gTitleScreenData.mScript, "title info", "menu.focus.offset", Vector3D(0, 0, 0)), localX, screenX);
++	gTitleScreenData.mHeader.mHasDescriptionText = isMugenDefVectorVariable(&gTitleScreenData.mScript, "title info", "menu.desc.pos");
++	gTitleScreenData.mHeader.mDescriptionPosition = transformDreamCoordinatesVectorXY(getMugenDefVectorOrDefault(&gTitleScreenData.mScript, "title info", "menu.desc.pos", Vector3D(0, 0, 0)), localX, screenX);
++	gTitleScreenData.mHeader.mDescriptionFont = getMugenDefVectorIOrDefault(&gTitleScreenData.mScript, "title info", "menu.desc.font", Vector3DI(-1, 0, 0));
++	gTitleScreenData.mHeader.mDescriptionWidth = transformDreamCoordinates(getMugenDefFloatOrDefault(&gTitleScreenData.mScript, "title info", "menu.desc.width", INF), localX, screenX);
+ }
+ 
+ static void loadDemoHeader() {
+@@ -297,6 +334,11 @@ static void addMenuPoint(const char* tVariableName, void(*tCB)()) {
+ 	int index = vector_size(&gTitleScreenData.mMenus);
+ 	MenuText* e = (MenuText*)allocMemory(sizeof(MenuText));
+ 	e->mCB = tCB;
++	e->mName = (char*)allocMemory(int(strlen(text)) + 1);
++	strcpy(e->mName, text);
++	std::string descriptionName = std::string("menu.itemdesc.") + (tVariableName + strlen("menu.itemname."));
++	e->mDescription = getAllocatedMugenDefStringOrDefault(&gTitleScreenData.mScript, "title info", descriptionName.c_str(), " ");
++	e->mSlide = 0;
+ 	e->mOffset = Vector3D(gTitleScreenData.mHeader.mItemSpacing.x*index, gTitleScreenData.mHeader.mItemSpacing.y*index, 50);
+ 	Position position = vecAdd(gTitleScreenData.mHeader.mMenuPosition, e->mOffset);
+ 	position = transformDreamCoordinatesVectorXY(position, gTitleScreenData.mLocalCoord.x, getScreenSize().x);
+@@ -332,6 +374,17 @@ static void setSelectedMenuElementActive() {
+ 	else if (gTitleScreenData.mSelected < gTitleScreenData.mTopOption) {
+ 		setUpperOptionAsBase();
+ 	}
++
++	if (gTitleScreenData.mHeader.mHasFocusText) {
++		changeMugenText(gTitleScreenData.mFocusTextID, e->mName);
++		gTitleScreenData.mFocusSlide = 0;
++	}
++	if (gTitleScreenData.mHeader.mHasDescriptionText) {
++		changeMugenText(gTitleScreenData.mDescriptionTextID, e->mDescription);
++	}
++	if (gTitleScreenData.mCursorElement) {
++		resetMugenAnimation(gTitleScreenData.mCursorElement);
++	}
+ }
+ 
+ static void setSelectedMenuElementInactive() {
+@@ -341,20 +394,38 @@ static void setSelectedMenuElementInactive() {
+ 	setMugenTextAlignment(e->mTextID, getMugenTextAlignmentFromMugenAlignmentIndex(gTitleScreenData.mHeader.mItemFont.z));
+ }
+ 
+-static void loadCredits() {
+-	gTitleScreenData.mCreditBGAnimationElement = playOneFrameAnimationLoop(Vector3D(0, 230, 50), &gTitleScreenData.mWhiteTexture);
+-	setAnimationSize(gTitleScreenData.mCreditBGAnimationElement, Vector3D(320, 20, 1), Vector3D(0, 0, 0));
+-	setAnimationColor(gTitleScreenData.mCreditBGAnimationElement, 0, 0, 0.5);
++// JFV: the stock engine drew a blue footer bar with "Dolmexica Infinite 1.8" and a date/presenter
++// line here (loadCredits). It is removed; the engine credit lives in the game's docs/credits.
+ 
+-	gTitleScreenData.mLeftCreditTextID = addMugenText("Dolmexica Infinite 1.8", Vector3D(0, 240, 51), -1);
+-	
+-	gTitleScreenData.mRightCreditTextID = addMugenText("09/09/26 Presented by Dogma", Vector3D(320, 240, 51), -1);
+-	setMugenTextAlignment(gTitleScreenData.mRightCreditTextID, MUGEN_TEXT_ALIGNMENT_RIGHT);
++static void addTitleText(int* oID, const Position& tPosition, const Vector3DI& tFont, float tZ) {
++	*oID = addMugenText(" ", Vector3D(tPosition.x, tPosition.y, tZ), tFont.x);
++	setMugenTextScale(*oID, transformDreamCoordinates(1, gTitleScreenData.mLocalCoord.x, getScreenSize().x));
++	setMugenTextColor(*oID, getMugenTextColorFromMugenTextColorIndex(tFont.y));
++	setMugenTextAlignment(*oID, getMugenTextAlignmentFromMugenAlignmentIndex(tFont.z));
++}
++
++static void loadFocusTexts() {
++	if (gTitleScreenData.mHeader.mHasFocusText) {
++		addTitleText(&gTitleScreenData.mFocusTextID, gTitleScreenData.mHeader.mFocusPosition, gTitleScreenData.mHeader.mFocusFont, 52);
++	}
++	if (gTitleScreenData.mHeader.mHasDescriptionText) {
++		addTitleText(&gTitleScreenData.mDescriptionTextID, gTitleScreenData.mHeader.mDescriptionPosition, gTitleScreenData.mHeader.mDescriptionFont, 52);
++		setMugenTextTextBoxWidth(gTitleScreenData.mDescriptionTextID, gTitleScreenData.mHeader.mDescriptionWidth);
++	}
++	gTitleScreenData.mFocusSlide = 1;
+ }
+ 
+ static void loadBoxCursor() {
++	gTitleScreenData.mCursorElement = NULL;
++	if (gTitleScreenData.mHeader.mCursorAnimation >= 0 && hasMugenAnimation(&gTitleScreenData.mAnimations, gTitleScreenData.mHeader.mCursorAnimation)) {
++		// an animated cursor replaces the box cursor
++		gTitleScreenData.mHeader.mIsBoxCursorVisible = 0;
++		gTitleScreenData.mCursorElement = addMugenAnimation(getMugenAnimation(&gTitleScreenData.mAnimations, gTitleScreenData.mHeader.mCursorAnimation), &gTitleScreenData.mSprites, Vector3D(0, 0, 49));
++		setMugenAnimationBaseDrawScale(gTitleScreenData.mCursorElement, transformDreamCoordinates(1, gTitleScreenData.mLocalCoord.x, getScreenSize().x));
++		return;
++	}
+ 	if (gTitleScreenData.mHeader.mIsBoxCursorVisible) {
+-		gTitleScreenData.mBoxCursorID = addBoxCursor(Vector3D(0, 0, 0), Vector3D(0, 0, 49), gTitleScreenData.mHeader.mBoxCursorCoordinates); 
++		gTitleScreenData.mBoxCursorID = addBoxCursor(Vector3D(0, 0, 0), Vector3D(0, 0, 49), gTitleScreenData.mHeader.mBoxCursorCoordinates);
+ 	}
+ }
+ 
+@@ -379,6 +450,8 @@ static void resetGameStateFromNetplayIfNecessary() {
+ }
+ 
+ static void updateMenuElementPositions();
++static Position getSelectedCursorTarget();
++static void updateSelectionBox();
+ 
+ static void loadTitleScreen() {
+ 	setWrapperTitleScreen(getDreamTitleScreen());
+@@ -430,15 +503,19 @@ static void loadTitleScreen() {
+ 	addMenuPoint("menu.itemname.exit", exitCB);
+ 
+ 	loadBoxCursor();
++	loadFocusTexts();
+ 
+ 	gTitleScreenData.mMenuBasePosition = gTitleScreenData.mHeader.mMenuPosition;
+ 	gTitleScreenData.mMenuTargetPosition = gTitleScreenData.mMenuBasePosition;
+ 	gTitleScreenData.mTopOption = 0;
+ 	setSelectedMenuElementActive();
+ 	gTitleScreenData.mMenuBasePosition = gTitleScreenData.mMenuTargetPosition;
++	if (vector_size(&gTitleScreenData.mMenus)) {
++		((MenuText*)vector_get(&gTitleScreenData.mMenus, gTitleScreenData.mSelected))->mSlide = 1;
++	}
+ 	updateMenuElementPositions();
+-
+-	loadCredits();
++	gTitleScreenData.mCursorPosition = getSelectedCursorTarget();
++	updateSelectionBox();
+ 
+ 	loadTitleMusic();
+ 
+@@ -456,6 +533,11 @@ static void unloadTitleScreen() {
+ 	unloadMugenAnimationFile(&gTitleScreenData.mAnimations);
+ 	unloadMugenSoundFile(&gTitleScreenData.mSounds);
+ 
++	for (int i = 0; i < vector_size(&gTitleScreenData.mMenus); i++) {
++		MenuText* e = (MenuText*)vector_get(&gTitleScreenData.mMenus, i);
++		freeMemory(e->mName);
++		freeMemory(e->mDescription);
++	}
+ 	delete_vector(&gTitleScreenData.mMenus);
+ }
+ 
+@@ -481,12 +563,25 @@ static void updateMenuBasePosition() {
+ 	gTitleScreenData.mMenuBasePosition = vecAdd(gTitleScreenData.mMenuBasePosition, vecScale(vecSub(gTitleScreenData.mMenuTargetPosition, gTitleScreenData.mMenuBasePosition), 0.1f));
+ }
+ 
++// JFV: moves a value toward its target by menu.ease of the remaining distance per frame. It always
++// chases the latest target, so rapid input or a reversal never queues up animation.
++static float easeToward(float tValue, float tTarget) {
++	const auto next = tValue + (tTarget - tValue) * gTitleScreenData.mHeader.mEase;
++	return fabs(tTarget - next) < 0.02f ? tTarget : next;
++}
++
+ static void updateMenuElementPositions() {
+ 	int i;
+ 	int l = vector_size(&gTitleScreenData.mMenus);
+ 	for (i = 0; i < l; i++) {
+ 		MenuText* e = (MenuText*)vector_get(&gTitleScreenData.mMenus, i);
+-		setMugenTextPosition(e->mTextID, vecAdd(gTitleScreenData.mMenuBasePosition, e->mOffset));
++		e->mSlide = easeToward(e->mSlide, i == gTitleScreenData.mSelected ? 1.0f : 0.0f);
++		setMugenTextPosition(e->mTextID, vecAdd(vecAdd(gTitleScreenData.mMenuBasePosition, e->mOffset), vecScale(gTitleScreenData.mHeader.mActiveOffset, e->mSlide)));
++	}
++	if (gTitleScreenData.mHeader.mHasFocusText) {
++		gTitleScreenData.mFocusSlide = easeToward(gTitleScreenData.mFocusSlide, 1.0f);
++		const auto p = vecAdd(gTitleScreenData.mHeader.mFocusPosition, vecScale(gTitleScreenData.mHeader.mFocusSlideOffset, 1.0f - gTitleScreenData.mFocusSlide));
++		setMugenTextPosition(gTitleScreenData.mFocusTextID, Vector3D(p.x, p.y, 52));
+ 	}
+ }
+ 
+@@ -506,7 +601,21 @@ static void updateSelectionBoxPosition() {
+ 	setBoxCursorPosition(gTitleScreenData.mBoxCursorID, pos);
+ }
+ 
++// the cursor's resting place: the selected item's slot without the active slide
++static Position getSelectedCursorTarget() {
++	if (!vector_size(&gTitleScreenData.mMenus)) return Vector3D(0, 0, 0);
++	MenuText* e = (MenuText*)vector_get(&gTitleScreenData.mMenus, gTitleScreenData.mSelected);
++	return vecAdd(vecAdd(gTitleScreenData.mMenuBasePosition, e->mOffset), gTitleScreenData.mHeader.mCursorOffset);
++}
++
+ static void updateSelectionBox() {
++	if (gTitleScreenData.mCursorElement) {
++		const auto target = getSelectedCursorTarget();
++		gTitleScreenData.mCursorPosition.x = easeToward(gTitleScreenData.mCursorPosition.x, target.x);
++		gTitleScreenData.mCursorPosition.y = easeToward(gTitleScreenData.mCursorPosition.y, target.y);
++		setMugenAnimationPosition(gTitleScreenData.mCursorElement, Vector3D(gTitleScreenData.mCursorPosition.x, gTitleScreenData.mCursorPosition.y, 49));
++		return;
++	}
+ 	if (!gTitleScreenData.mHeader.mIsBoxCursorVisible) return;
+ 
+ 	updateSelectionBoxPosition();
+diff --git a/repo/characterselectscreen.cpp b/repo/characterselectscreen.cpp
+index 7b4c4af..daa5268 100644
+--- a/repo/characterselectscreen.cpp
++++ b/repo/characterselectscreen.cpp
+@@ -1,6 +1,7 @@
+ #include "characterselectscreen.h"
+ 
+ #include <assert.h>
++#include <math.h>
+ #include <algorithm>
+ #include <string>
+ 
+@@ -43,6 +44,7 @@ typedef struct {
+ 	Position2D mBigPortraitOffset;
+ 	Vector2D mBigPortraitScale;
+ 	int mBigPortraitIsFacingRight;
++	Vector2D mBigPortraitWindow; // JFV p<n>.face.window = w,h: the portrait is scaled down to fit and centred at the bottom
+ 
+ 	Position2D mNameOffset;
+ 	Vector3DI mNameFont;
+@@ -90,6 +92,8 @@ typedef struct {
+ 	MugenAnimation* mSmallPortraitAnimation;
+ 	Position2D mSmallPortraitOffset;
+ 	Vector2D mSmallPortraitScale;
++	int mIsFittingSmallPortraits; // JFV portrait.fit = 1: each cell portrait is scaled down to fit its cell and centred
++	float mCursorEase; // JFV cursor.ease: fraction of the remaining distance a cursor covers per frame, 1 = snap
+ 
+ 	Position2D mTitleOffset;
+ 	Vector3DI mTitleFont;
+@@ -157,6 +161,9 @@ typedef struct {
+ 	int mHasBeenLoadedBefore;
+ 	Vector2DI mSelectedCharacter;
+ 	RandomSelector mRandom;
++
++	Position mCursorPosition; // JFV: eased cursor position and the cell it is heading to
++	Position mCursorTarget;
+ } Selector;
+ 
+ typedef struct {
+@@ -286,6 +293,10 @@ static void loadMenuPlayerHeader(const char* tPlayerName, PlayerHeader* tHeader)
+ 	const auto faceDirection = getMugenDefIntegerOrDefault(&gCharacterSelectScreenData.mScript, "select info", fullVariableName, 1);
+ 	tHeader->mBigPortraitIsFacingRight = faceDirection == 1;
+ 
++	sprintf(fullVariableName, "%s.face.window", tPlayerName);
++	tHeader->mBigPortraitWindow = getMugenDefVector2DOrDefault(&gCharacterSelectScreenData.mScript, "select info", fullVariableName, Vector2D(0, 0));
++	tHeader->mBigPortraitWindow = transformDreamCoordinatesVector2D(tHeader->mBigPortraitWindow, gCharacterSelectScreenData.mLocalCoord.x, getScreenSize().x);
++
+ 	sprintf(fullVariableName, "%s.name.offset", tPlayerName);
+ 	tHeader->mNameOffset = getMugenDefVector2DOrDefault(&gCharacterSelectScreenData.mScript, "select info", fullVariableName, Vector2D(0, 0));
+ 	tHeader->mNameOffset = transformDreamCoordinatesVector2D(tHeader->mNameOffset, gCharacterSelectScreenData.mLocalCoord.x, getScreenSize().x);
+@@ -467,6 +478,9 @@ static void loadMenuHeader() {
+ 
+ 	gCharacterSelectScreenData.mHeader.mSmallPortraitOffset = getMugenDefVector2DOrDefault(&gCharacterSelectScreenData.mScript, "select info", "portrait.offset", Vector2D(0, 0));
+ 	gCharacterSelectScreenData.mHeader.mSmallPortraitScale = getMugenDefVector2DOrDefault(&gCharacterSelectScreenData.mScript, "select info", "portrait.scale", Vector2D(1, 1));
++	gCharacterSelectScreenData.mHeader.mIsFittingSmallPortraits = getMugenDefIntegerOrDefault(&gCharacterSelectScreenData.mScript, "select info", "portrait.fit", 0);
++	gCharacterSelectScreenData.mHeader.mCursorEase = getMugenDefFloatOrDefault(&gCharacterSelectScreenData.mScript, "select info", "cursor.ease", 1.0f);
++	if (gCharacterSelectScreenData.mHeader.mCursorEase <= 0.0f || gCharacterSelectScreenData.mHeader.mCursorEase > 1.0f) gCharacterSelectScreenData.mHeader.mCursorEase = 1.0f;
+ 
+ 	gCharacterSelectScreenData.mHeader.mTitleOffset = getMugenDefVector2DOrDefault(&gCharacterSelectScreenData.mScript, "select info", "title.offset", Vector2D(0, 0));
+ 	gCharacterSelectScreenData.mHeader.mTitleFont = getMugenDefVectorIOrDefault(&gCharacterSelectScreenData.mScript, "select info", "title.font", Vector3DI(-1, 0, 0));
+@@ -576,11 +590,34 @@ static Position2D getCellScreenPosition(const Vector2DI& tCellPosition) {
+ 	return gCharacterSelectScreenData.mHeader.mPosition + Vector2D(dx, dy);
+ }
+ 
++// JFV: scale a portrait down (never up past tMaxScale) to fit a box, centred horizontally and either
++// centred or bottom-aligned vertically. Character portraits come in many sizes and axes (a 21x54 icon
++// whose axis sits 52 px below its top, 45x33 icons, 46x61 big portraits), and the stock engine draws
++// them at one global scale with no bound. A mirrored portrait (facing left) is placed so it still
++// fills the same box.
++static void fitPortraitInBox(MugenAnimationHandlerElement* tElement, MugenAnimation* tAnimation, MugenSpriteFile* tSprites, const Vector2D& tTopLeft, const Vector2D& tBox, float tMaxScale, int tIsFacingRight, int tIsBottomAligned, float tZ) {
++	const auto size = getAnimationFirstElementSpriteSize(tAnimation, tSprites);
++	if (size.x <= 0 || size.y <= 0 || tBox.x <= 0 || tBox.y <= 0) return;
++	const auto axis = getAnimationFirstElementSpriteOffset(tAnimation, tSprites);
++	float scale = tBox.x / size.x;
++	if (tBox.y / size.y < scale) scale = tBox.y / size.y;
++	if (tMaxScale > 0 && tMaxScale < scale) scale = tMaxScale;
++	const auto dx = (tBox.x - size.x * scale) / 2;
++	const auto dy = tIsBottomAligned ? (tBox.y - size.y * scale) : (tBox.y - size.y * scale) / 2;
++	const auto x = tIsFacingRight ? tTopLeft.x + dx + axis.x * scale : tTopLeft.x + tBox.x - dx - axis.x * scale;
++	setMugenAnimationDrawScale(tElement, Vector2D(scale, scale));
++	setMugenAnimationPosition(tElement, Vector3D(x, tTopLeft.y + dy + axis.y * scale, tZ));
++}
++
+ static void showMenuSelectableAnimations(MenuCharacterLoadCaller* /*tCaller*/, SelectCharacter& e) {
+ 	auto pos = getCellScreenPosition(e.mCellPosition).xyz(40.0);
+ 	if (gCharacterSelectScreenData.mHeader.mIsShowingPortraits) {
+ 		e.mPortraitAnimationElement = addMugenAnimation(gCharacterSelectScreenData.mHeader.mSmallPortraitAnimation, &e.mSprites, pos + gCharacterSelectScreenData.mHeader.mSmallPortraitOffset);
+ 		setMugenAnimationDrawScale(e.mPortraitAnimationElement, gCharacterSelectScreenData.mHeader.mSmallPortraitScale);
++		if (gCharacterSelectScreenData.mHeader.mIsFittingSmallPortraits) {
++			const auto topLeft = Vector2D(pos.x, pos.y) + gCharacterSelectScreenData.mHeader.mSmallPortraitOffset;
++			fitPortraitInBox(e.mPortraitAnimationElement, gCharacterSelectScreenData.mHeader.mSmallPortraitAnimation, &e.mSprites, topLeft, gCharacterSelectScreenData.mHeader.mCellSize, gCharacterSelectScreenData.mHeader.mSmallPortraitScale.x, 1, 0, pos.z);
++		}
+ 	}
+ 	if (!gCharacterSelectScreenData.mHeader.mIsShowingEmptyBoxes) {
+ 		pos.z = 30;
+@@ -1175,6 +1212,15 @@ static void updateCharacterSelectionCredits(SelectCharacter* character) {
+ 	}
+ }
+ 
++static void fitBigPortrait(int i, SelectCharacter* tCharacter) {
++	PlayerHeader* player = &gCharacterSelectScreenData.mHeader.mPlayers[i];
++	if (!gCharacterSelectScreenData.mHeader.mIsShowingPortraits || player->mBigPortraitWindow.x <= 0) return;
++	const auto& box = player->mBigPortraitWindow;
++	// p2.face.offset is the portrait's right edge when it faces left, as in M.U.G.E.N
++	const auto topLeft = player->mBigPortraitIsFacingRight ? Vector2D(player->mBigPortraitOffset.x, player->mBigPortraitOffset.y) : Vector2D(player->mBigPortraitOffset.x - box.x, player->mBigPortraitOffset.y);
++	fitPortraitInBox(gCharacterSelectScreenData.mSelectors[i].mBigPortraitAnimationElement, player->mBigPortraitAnimation, &tCharacter->mSprites, topLeft, box, player->mBigPortraitScale.x, player->mBigPortraitIsFacingRight, 1, 30.0);
++}
++
+ static void showSelectCharacterForSelector(int i, SelectCharacter* tCharacter) {
+ 	PlayerHeader* player = &gCharacterSelectScreenData.mHeader.mPlayers[i];
+ 
+@@ -1183,6 +1229,7 @@ static void showSelectCharacterForSelector(int i, SelectCharacter* tCharacter) {
+ 			setMugenAnimationBaseDrawScale(gCharacterSelectScreenData.mSelectors[i].mBigPortraitAnimationElement, 1);
+ 			setMugenAnimationSprites(gCharacterSelectScreenData.mSelectors[i].mBigPortraitAnimationElement, &tCharacter->mSprites);
+ 			changeMugenAnimation(gCharacterSelectScreenData.mSelectors[i].mBigPortraitAnimationElement, player->mBigPortraitAnimation);
++			fitBigPortrait(i, tCharacter);
+ 		}
+ 		changeMugenText(gCharacterSelectScreenData.mSelectors[i].mNameTextID, tCharacter->mDisplayCharacterName);
+ 	}
+@@ -1203,7 +1250,11 @@ static void moveSelectionToTarget(int i, const Vector2DI& tTarget, int tDoesPlay
+ 
+ 	gCharacterSelectScreenData.mSelectors[i].mSelectedCharacter = tTarget;
+ 	const auto p = getCellScreenPosition(tTarget).xyz(SELECTOR_Z);
+-	setMugenAnimationPosition(gCharacterSelectScreenData.mSelectors[i].mSelectorAnimationElement, p);
++	gCharacterSelectScreenData.mSelectors[i].mCursorTarget = p;
++	if (!tDoesPlaySound || gCharacterSelectScreenData.mHeader.mCursorEase >= 1.0f) { // placing, not moving: no easing
++		gCharacterSelectScreenData.mSelectors[i].mCursorPosition = p;
++		setMugenAnimationPosition(gCharacterSelectScreenData.mSelectors[i].mSelectorAnimationElement, p);
++	}
+ 
+ 	if (tDoesPlaySound) {
+ 		tryPlayMugenSoundAdvanced(&gCharacterSelectScreenData.mSounds, owner->mCursorMoveSound.x, owner->mCursorMoveSound.y, parseGameMidiVolumeToPrism(getGameMidiVolume()));
+@@ -1620,7 +1671,22 @@ static void updateStageSelect() {
+ 	updateMugenTextBasedOnVector3DI(gCharacterSelectScreenData.mStageSelect.mTextID, fontData);
+ }
+ 
++// JFV: cursors glide to their cell (cursor.ease). They always head for the latest target, so fast
++// input or a reversal never queues motion, and the selection itself changes at once.
++static void updateCursorEasing() {
++	const auto ease = gCharacterSelectScreenData.mHeader.mCursorEase;
++	if (ease >= 1.0f) return;
++	for (int i = 0; i < 2; i++) {
++		Selector& s = gCharacterSelectScreenData.mSelectors[i];
++		if (!s.mIsActive) continue;
++		const auto d = vecSub(s.mCursorTarget, s.mCursorPosition);
++		s.mCursorPosition = (fabs(d.x) < 0.05 && fabs(d.y) < 0.05) ? s.mCursorTarget : vecAdd(s.mCursorPosition, vecScale(d, ease));
++		setMugenAnimationPosition(s.mSelectorAnimationElement, s.mCursorPosition);
++	}
++}
++
+ static void updateCharacterSelectScreen() {
++	updateCursorEasing();
+ 	updateSelections();
+ 	updateSelectionInputs();
+ 	updateStageSelect();

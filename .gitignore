@@ -39,3 +39,5 @@ handoff/extracts/tbm-system.def-head.txt
 *.self
 *.exe
 *.dll
+reports/vita3k/
+ui-work/

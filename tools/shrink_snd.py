@@ -54,7 +54,8 @@ def _reencode(w, rate, bits):
 
 
 def shrink(src, dst, rate=22050):
-    d = open(src, "rb").read()
+    with open(src, "rb") as source:
+        d = source.read()
     if d[:12] != b"ElecbyteSnd\x00":
         raise ValueError(f"{src}: not an Elecbyte .snd")
     version = d[12:16]

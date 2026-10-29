@@ -10,6 +10,11 @@ the game, and records whether the process survives, its peak memory, and screens
     python tools/soak_test.py                 # every character in build/game select.def
     python tools/soak_test.py bender kaede    # just these ids
     python tools/soak_test.py --all --secs 240  # whole roster at once, random matchups
+    python tools/soak_test.py --all --secs 60 --wait 300 --first 2 --every 3   # motif review:
+        # title held 5 s, then select / VS / fight, a screenshot every 3 s
+
+The [Demo Mode] patch goes into the active motif's system.def (mugen.cfg `motif =`), so it
+works for the stock motif and for data/tbm.
 
 The game's own select.def/system.def are restored afterwards.
 Results: reports/soak/<id>/*.png and reports/soak/results.csv
@@ -42,7 +47,7 @@ DEMO = """[Demo Mode]
 enabled = 1
 select.enabled = {select}
 vsscreen.enabled = 1
-title.waittime = 90
+title.waittime = {wait}
 fight.endtime = {endtime}
 fight.playbgm = 1
 fight.bars.display = 1
@@ -126,13 +131,13 @@ def roster():
     return chars
 
 
-def run_one(label, select_text, secs, endtime, select_enabled):
+def run_one(label, select_text, secs, endtime, select_enabled, wait=90, first=8, every=12):
     out = os.path.join(OUTDIR, label)
     os.makedirs(out, exist_ok=True)
     write(os.path.join(DATA, "select.def"), select_text)
     sysdef = read(SYSTEM_BAK)
-    sysdef = re.sub(r"(?is)\[Demo Mode\].*?(?=\n\s*;-{5,}|\n\[)", DEMO.format(select=select_enabled, endtime=endtime).strip(), sysdef)
-    write(os.path.join(DATA, "system.def"), sysdef)
+    sysdef = re.sub(r"(?is)\[Demo Mode\].*?(?=\n\s*;-{5,}|\n\[)", DEMO.format(select=select_enabled, endtime=endtime, wait=wait).strip(), sysdef)
+    write(SYSTEM, sysdef)
 
     p = subprocess.Popen([EXE], cwd=GAME)
     proc = psutil.Process(p.pid)
@@ -147,7 +152,7 @@ def run_one(label, select_text, secs, endtime, select_enabled):
         except psutil.Error:
             pass
         el = time.time() - t0
-        if el > 8 + n * 12 and n < 30:
+        if el > first + n * every and n < 60:
             shot(p.pid, os.path.join(out, f"{n:02d}-{int(el):03d}s.png"))
             n += 1
     alive = p.poll() is None
@@ -166,26 +171,31 @@ def run_one(label, select_text, secs, endtime, select_enabled):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    secs = int(sys.argv[sys.argv.index("--secs") + 1]) if "--secs" in sys.argv else 75
-    if "--secs" in sys.argv:
-        args.remove(str(secs))
+    def opt(name, default):
+        if name not in sys.argv:
+            return default
+        v = sys.argv[sys.argv.index(name) + 1]
+        args.remove(v)
+        return int(v)
+    secs = opt("--secs", 75)
+    timing = {"wait": opt("--wait", 90), "first": opt("--first", 8), "every": opt("--every", 12)}
     shutil.copy2(os.path.join(DATA, "select.def"), SELECT_BAK)
-    shutil.copy2(os.path.join(DATA, "system.def"), SYSTEM_BAK)
+    shutil.copy2(SYSTEM, SYSTEM_BAK)
     results = []
     try:
         if "--all" in sys.argv:
-            results.append(run_one("all", read(SELECT_BAK), secs, 1500, 1))
+            results.append(run_one("all", read(SELECT_BAK), secs, 1500, 1, **timing))
         else:
             for cid, entry, stage in roster():
                 if args and cid not in args:
                     continue
                 sel = f"[Characters]\n{entry}, {stage}\n\n[ExtraStages]\n{stage}\n\n[Options]\narcade.maxmatches = 6,1,1,0,0,0,0,0,0,0\nteam.maxmatches = 4,1,1,0,0,0,0,0,0,0\n"
-                r = run_one(cid, sel, secs, 3000, 0)
+                r = run_one(cid, sel, secs, 3000, 0, **timing)
                 print(r, flush=True)
                 results.append(r)
     finally:
         shutil.copy2(SELECT_BAK, os.path.join(DATA, "select.def"))
-        shutil.copy2(SYSTEM_BAK, os.path.join(DATA, "system.def"))
+        shutil.copy2(SYSTEM_BAK, SYSTEM)
     os.makedirs(OUTDIR, exist_ok=True)
     path = os.path.join(OUTDIR, "results.csv")
     new = not os.path.exists(path)
@@ -198,8 +208,16 @@ def main():
         print(r)
 
 
+def motif_system():
+    """The system.def the engine will load: mugen.cfg `motif = data/...` (stock: data/system.def)."""
+    m = re.search(r"(?im)^\s*motif\s*=\s*([^;\r\n]+)", read(os.path.join(DATA, "mugen.cfg")))
+    rel = m.group(1).strip().replace("\\", "/") if m else "data/system.def"
+    return os.path.join(GAME, "assets", *rel.split("/"))
+
+
 SELECT_BAK = os.path.join(DATA, "select.def.soakbak")
-SYSTEM_BAK = os.path.join(DATA, "system.def.soakbak")
+SYSTEM = motif_system()
+SYSTEM_BAK = SYSTEM + ".soakbak"
 
 if __name__ == "__main__":
     main()

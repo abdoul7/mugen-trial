@@ -1,0 +1,101 @@
+diff --git a/repo/fightscreen.cpp b/repo/fightscreen.cpp
+index 38d7e1f..cdf482e 100644
+--- a/repo/fightscreen.cpp
++++ b/repo/fightscreen.cpp
+@@ -131,6 +131,7 @@ static void loadFightScreen() {
+ 
+ 	instantiateActor(getDreamFightUIBP());
+ 	instantiateActor(getDreamGameLogic());
++	setActorUnpausable(instantiateActor(getJfvPauseHandler())); // [JFV] patch 0004: Start = pause
+ 
+ 	instantiateActor(getFightResultDisplay());
+ 	
+diff --git a/repo/gamelogic.cpp b/repo/gamelogic.cpp
+index ddcc700..4d8dd23 100644
+--- a/repo/gamelogic.cpp
++++ b/repo/gamelogic.cpp
+@@ -4,6 +4,8 @@
+ 
+ #include <prism/screeneffect.h>
+ #include <prism/wrapper.h>
++#include <prism/mugentexthandler.h>
++#include <prism/actorhandler.h>
+ #include <prism/system.h>
+ #include <prism/input.h>
+ #include <prism/log.h>
+@@ -613,6 +615,62 @@ ActorBlueprint getDreamGameLogic() {
+ 	return makeActorBlueprint(loadGameLogic, NULL, updateGameLogic);
+ }
+ 
++// [JFV] player pause (patch 0004). An UNPAUSABLE actor: Start during the fighting part of a round
++// freezes everything that is pausable (players, physics, timers, effects) via pauseWrapper() and
++// shows "PAUSED"; Start again resumes. Not in the CPU-only modes, where Start already means "quit".
++static struct {
++	int mIsPaused;
++	int mHasText;
++	int mTextID;
++} gJfvPauseData;
++
++static void loadJfvPause(void* tData) {
++	(void)tData;
++	gJfvPauseData.mIsPaused = 0;
++	gJfvPauseData.mHasText = 0;
++}
++
++static void unloadJfvPause(void* tData) {
++	(void)tData;
++	if (gJfvPauseData.mIsPaused) resumeWrapper();
++	gJfvPauseData.mIsPaused = 0;
++}
++
++static int canJfvPause() {
++	const GameMode mode = getGameMode();
++	if (mode == GAME_MODE_WATCH || mode == GAME_MODE_SUPER_WATCH || mode == GAME_MODE_EXHIBIT || mode == GAME_MODE_OSU) return 0;
++	return gGameLogicData.mRoundStateNumber == ROUND_STATE_FIGHT;
++}
++
++static void setJfvPauseText(int tIsVisible) {
++	if (!gJfvPauseData.mHasText) {
++		if (!tIsVisible) return;
++		gJfvPauseData.mTextID = addMugenTextMugenStyle("PAUSED", Vector3D(160, 110, 90), Vector3DI(1, 0, 0));
++		gJfvPauseData.mHasText = 1;
++	}
++	setMugenTextVisibility(gJfvPauseData.mTextID, tIsVisible);
++}
++
++static void updateJfvPause(void* tData) {
++	(void)tData;
++	if (!(hasPressedStartFlankSingle(0) || hasPressedStartFlankSingle(1))) return;
++	if (!gJfvPauseData.mIsPaused) {
++		if (!canJfvPause() || isWrapperPaused()) return;
++		pauseWrapper();
++		gJfvPauseData.mIsPaused = 1;
++		setJfvPauseText(1);
++	}
++	else {
++		resumeWrapper();
++		gJfvPauseData.mIsPaused = 0;
++		setJfvPauseText(0);
++	}
++}
++
++ActorBlueprint getJfvPauseHandler() {
++	return makeActorBlueprint(loadJfvPause, unloadJfvPause, updateJfvPause);
++}
++
+ int getDreamGameTime()
+ {
+ 	return gGameLogicData.mGameTime;
+diff --git a/repo/gamelogic.h b/repo/gamelogic.h
+index b5927e2..fe44b62 100644
+--- a/repo/gamelogic.h
++++ b/repo/gamelogic.h
+@@ -66,4 +66,5 @@ void setGameModeOsu();
+ void setGameModeNetplay(int isHost);
+ void resetGameMode();
+ 
+-GameMode getGameMode();
+\ No newline at end of file
++GameMode getGameMode();
++ActorBlueprint getJfvPauseHandler(); // [JFV] patch 0004
+\ No newline at end of file

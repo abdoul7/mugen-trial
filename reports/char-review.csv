@@ -1,0 +1,46 @@
+id,states,commands,motion_moves,states_3000s(supers),animations,sprites,sounds,ai,missing_core_anims
+kfm,49,30,17,3,108,274,12,no,win pose
+pupa,97,33,15,18,194,514,58,no,"KO lying, win pose, intro"
+bender,65,43,11,4,254,806,78,no,win pose
+lucario,163,72,32,5,208,643,55,no,win pose
+goenitz,153,88,27,17,265,748,78,yes,
+gouken,74,79,43,14,389,1785,75,yes,"win pose, intro"
+janemba,169,80,52,34,227,566,89,yes,win pose
+android_17,163,73,39,6,311,1159,153,yes,KO lying
+android_21_1_1,159,70,38,20,359,1394,158,yes,
+android_18_1,114,73,38,15,192,1009,126,yes,
+baby_vegeta,180,73,38,13,216,1022,123,yes,
+bardock_ssj,84,73,39,7,150,802,142,yes,
+garou_hunters,163,64,33,10,711,220,31,yes,
+goku_black_ssr,229,73,38,18,284,1355,164,yes,intro
+kefla,251,73,38,22,261,1104,229,yes,
+metal_bat,70,64,33,6,239,953,123,yes,intro
+sasuke_hebi_white,52,71,37,4,133,827,107,yes,
+tank_top_master,95,79,32,10,193,964,69,yes,
+tenshinhan_saga_cell,106,75,38,20,152,806,85,yes,
+vegito_ssb,214,74,40,16,302,1313,154,yes,intro
+madara_revived,174,77,45,37,299,871,111,yes,
+gohan_teen_jus_k,138,73,38,53,617,2029,106,yes,
+hiruzen,189,76,42,7,261,1224,139,yes,
+kawashiki,170,71,38,8,226,1187,57,yes,
+otsutsuki_kaguya,173,65,33,25,345,2332,249,yes,
+androide_c_18,356,64,32,26,532,3819,199,yes,
+ichibe_hyosube,299,64,32,27,831,4642,272,yes,
+ems_sasuke,115,30,16,0,185,304,58,yes,
+rare_akuma,222,72,36,25,326,957,136,yes,"win pose, intro"
+aizen,131,115,48,2,258,712,112,yes,
+yoko_kurama,92,58,20,6,174,752,48,yes,win pose
+toshiro,80,103,27,2,214,1022,86,yes,
+ichigo,134,72,22,14,329,845,141,yes,
+caulifla,112,73,38,18,245,794,96,yes,
+sasori,182,77,45,24,256,756,99,yes,
+byakuya,111,118,41,2,331,824,120,yes,"win pose, intro"
+sbob,128,110,40,9,286,1111,106,yes,"KO lying, win pose, intro"
+pain,131,84,50,4,224,652,59,yes,
+minato_kcm,192,82,47,26,229,772,113,yes,
+hidan,91,84,34,24,308,1107,124,yes,
+king_piccolo,159,72,38,17,203,1121,112,yes,
+naruto_ashura,123,80,32,29,293,1110,118,no,
+vegeta_ssjg,560,49,5,144,943,3623,384,yes,intro
+shimakaze,217,105,31,18,337,1371,64,yes,"win pose, intro"
+naruto_baryon,222,69,33,38,259,1268,103,yes,

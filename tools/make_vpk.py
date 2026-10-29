@@ -59,6 +59,51 @@ def panel(w, h, title, sub=None):
     return img.convert("P", palette=Image.ADAPTIVE, colors=255)
 
 
+# Vita digital manual (sce_sys/manual/NNN.png, 960x544): opened from the game's LiveArea bubble.
+# Button mapping is from the engine source: prism/vita/input_vita.cpp (Cross=A, Circle=B, Square=X,
+# Triangle=Y, L=L, R=R) and repo/mugencommandhandler.cpp (MUGEN a=A, b=B, c=R, x=X, y=Y, z=L).
+MANUAL = [
+    ("CONTROLS", [
+        ("D-pad / left stick", "Move, jump (up), crouch (down), block (hold back)"),
+        ("Square", "Light punch   (x)"),
+        ("Triangle", "Medium punch   (y)"),
+        ("L", "Heavy punch   (z)"),
+        ("Cross", "Light kick   (a)"),
+        ("Circle", "Medium kick   (b)"),
+        ("R", "Heavy kick   (c)"),
+        ("Start", "Pause / resume a fight; confirm in menus"),
+    ], "Punch/kick names follow the MUGEN convention; each fighter decides what its buttons do."),
+    ("MENUS & SPECIAL MOVES", [
+        ("Cross or Start", "Confirm (menus, character and stage select)"),
+        ("D-pad", "Move the cursor"),
+        ("Arcade", "You vs a series of CPU fighters"),
+        ("Watch", "CPU vs CPU: pick both fighters and watch"),
+        ("Quarter circle", "Down, down-forward, forward + punch or kick"),
+        ("Dragon punch", "Forward, down, down-forward + punch"),
+        ("Charge", "Hold back 1-2 s, then forward + button"),
+        ("Remap buttons", "Options > Input Config > Key Config > Config all"),
+    ], "Config all asks for each button in turn; saved automatically. Default (R) resets."),
+]
+
+
+def manual_page(title, rows, note, n, total):
+    w, h = 960, 544
+    img = Image.new("RGB", (w, h), (12, 14, 28))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, w, 74], fill=(236, 112, 20))
+    d.text((32, 12), title, font=font(48), fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
+    d.text((w - 110, 26), f"{n} / {total}", font=font(26), fill=(255, 255, 255))
+    fk, fv = font(30), font(28)
+    y = 92
+    for k, v in rows:
+        d.rounded_rectangle([32, y, 330, y + 40], 8, fill=(40, 48, 90))
+        d.text((46, y + 3), k, font=fk, fill=(255, 220, 160))
+        d.text((352, y + 5), v, font=fv, fill=(235, 235, 245))
+        y += 47
+    d.text((32, h - 46), note, font=font(22), fill=(170, 175, 200))
+    return img.convert("P", palette=Image.ADAPTIVE, colors=255)
+
+
 def main():
     version = sys.argv[sys.argv.index("--version") + 1] if "--version" in sys.argv else "01.00"
     engine = os.path.join(VITA, "common", "DolmexicaInfinite.self")
@@ -81,12 +126,21 @@ def main():
     out = os.path.join(VITA, "build", f"{TITLE_ID}.vpk")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     assets = os.path.join(VITA, "..", "assets")
+    # --no-assets: engine + LiveArea only (a few MB, installs in seconds). The ~1.3 GB assets folder is then
+    # copied straight to ux0:app/JFVT00001/assets over USB/FTP: a 1.3 GB vpk is slow for VitaShell to
+    # unpack and promote, and the Vita going to sleep mid-install can hang the system.
+    with_assets = "--no-assets" not in sys.argv
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("sce_sys/param.sfo", param)
         z.write(engine, "eboot.bin")
+        for i, (title, rows, note) in enumerate(MANUAL, 1):
+            path = os.path.join(sce, "manual", f"{i:03d}.png")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            manual_page(title, rows, note, i, len(MANUAL)).save(path, optimize=True)
+            z.write(path, f"sce_sys/manual/{i:03d}.png")
         for rel in ("icon0.png", "livearea/contents/bg.png", "livearea/contents/startup.png", "livearea/contents/template.xml"):
             z.write(os.path.join(sce, rel), f"sce_sys/{rel}")
-        for dp, _, fs in os.walk(assets):
+        for dp, _, fs in (os.walk(assets) if with_assets else []):
             for f in fs:
                 if f.endswith((".soakbak", ".tmp")) or f.lower() == "thumbs.db":
                     continue

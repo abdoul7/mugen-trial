@@ -7,6 +7,13 @@ Re-runnable: it wipes build/game and recreates it, so every change lives in this
     python tools/build_assets.py            # build build/game
     python tools/build_assets.py --no-music # skip the MP3 -> OGG step (fast rebuilds)
     python tools/build_assets.py --no-shrink # keep character .snd files untouched
+    python tools/build_assets.py --skip-missing # leave out characters whose source folder is
+                                                # absent (e.g. AK1 archives you haven't got)
+    python tools/build_assets.py --no-minify    # do not minify character scripts
+    python tools/build_assets.py --prune-states # enable conservative state pruning
+    python tools/build_assets.py --prune-sprites # enable conservative sprite pruning
+    python tools/build_assets.py --motif tbm    # override roster.json's "motif" for this build
+    python tools/build_assets.py --motif jfv    # the Jump Force Vita UI (tools/make_ui.py)
 
 What it does, in order:
   1. copies the Dolmexica 1.8 engine (Windows exe + Vita kit + stock assets) to build/game
@@ -28,8 +35,10 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import make_ui  # noqa: E402
 import port_motif  # noqa: E402
 import shrink_snd  # noqa: E402
+import mugen_prune  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE = os.path.join(ROOT, "engine", "Dolmexica Infinite 1.8")
@@ -73,13 +82,45 @@ def exact_case(folder, name):
 KEEP = object()  # roster entry has no "localcoord": leave the character's own value alone
 
 
+CLS_LINE = re.compile(rb"(?m)^[^\x00-\x7f]*&cls[ \t]*\r?\n")
+
+
+def strip_cls_padding(folder):
+    """Remove lines that are only '<non-ASCII bytes>&cls' from a character's script files.
+
+    Some AK1 downloads (vegito) pad every .def/.cns/.cmd with ~80,000 of them, apparently to hide the real
+    text from editors. They mean nothing to MUGEN, but Dolmexica parses every line: ~8 MB of padding stalled
+    the select screen on the Vita. Returns the number of lines removed."""
+    n = 0
+    for dp, _, fs in os.walk(folder):
+        for f in fs:
+            if os.path.splitext(f)[1].lower() not in (".def", ".cns", ".cmd", ".st", ".air", ".dat"):
+                continue
+            path = os.path.join(dp, f)
+            data = open(path, "rb").read()
+            if b"&cls" not in data:
+                continue
+            new, k = CLS_LINE.subn(b"", data)
+            if k:
+                open(path, "wb").write(new)
+                n += k
+    return n
+
+
 def patch_char_def(def_path, localcoord, overrides=None):
     folder = os.path.dirname(def_path)
     text = read(def_path)
     overrides = {k.lower(): v for k, v in (overrides or {}).items()}
     out, section, changes = [], "", []
+    junk = 0
     for line in text.replace("\r\n", "\n").split("\n"):
         s = line.strip()
+        if not section and s and not s.startswith((";", "[")) and "=" not in s:
+            # filler before the first section that is neither a comment nor a key (e.g. vegito's 80,000
+            # "<BOM>&cls" lines that hide the real text from editors): the engine parses every line, and on
+            # the Vita that stalled the select screen, so drop it
+            junk += 1
+            continue
         m = re.match(r"\[([^\]]+)\]", s)
         if m:
             section = m.group(1).strip().lower()
@@ -104,6 +145,38 @@ def patch_char_def(def_path, localcoord, overrides=None):
                 changes.append(f"{kv.group(2)}: {v} -> {fixed}")
         out.append(line)
     write(def_path, "\n".join(out))
+    if junk:
+        changes.append(f"dropped {junk} junk lines before [Info]")
+    return changes
+
+
+def apply_script_fixes(character_dir, fixes):
+    """Apply exact, uniquely matching text replacements to copied character files."""
+    root = os.path.realpath(character_dir)
+    for fix in fixes:
+        target = os.path.realpath(os.path.join(root, fix["file"]))
+        if os.path.commonpath((root, target)) != root or target == root:
+            raise ValueError("script fix must stay inside the character directory")
+        original = read(target)
+        find = fix["find"]
+        if not find or original.count(find) != 1:
+            raise ValueError(f"script fix must match exactly once: {fix['file']}")
+        write(target, original.replace(find, fix["replace"], 1))
+
+
+def compress_copied_character(def_path, data_dir, minify=True, prune_states=False, prune_sprites=False):
+    stats = mugen_prune.compress_character(def_path, data_dir, minify, prune_states, prune_sprites)
+    changes = []
+    if minify:
+        changes.append(f"minified {stats['minify_changed']}/{stats['minify_files']} files "
+                       f"({stats['minify_before']}->{stats['minify_after']} bytes)")
+    if prune_states:
+        changes.append(f"states removed {stats['states_removed']}" +
+                       (" (dynamic target: kept all)" if stats['states_dynamic'] else ""))
+    if prune_sprites:
+        changes.append(f"sprites removed {stats['sprites_removed']}/{stats['sprites_before']} "
+                       f"({stats['sprite_before_bytes']}->{stats['sprite_after_bytes']} bytes)" +
+                       (" (dynamic sprite: kept all)" if stats['sprites_dynamic'] else ""))
     return changes
 
 
@@ -138,11 +211,69 @@ def copy_engine():
         (shutil.copytree if os.path.isdir(s) else shutil.copy2)(s, d)
 
 
+SIZE_LENGTHS = ("ground.back", "ground.front", "air.back", "air.front", "height")
+
+
+def scale_size_section(cns_path, factor):
+    """Multiply [Size] xscale/yscale (sprites AND hitboxes: prism scales Clsn by the draw scale) and the
+    body widths/height used for pushing and corner checks. Speeds (walk, jump) are left alone."""
+    text = read(cns_path)
+    m = re.search(r"(?is)(\[size\][^\n]*\n)(.*?)(?=\n\s*\[|$)", text)
+    if not m:
+        return False
+    body = m.group(2)
+    for key, default in (("xscale", 1.0), ("yscale", 1.0)):
+        if re.search(rf"(?im)^\s*{re.escape(key)}\s*=", body):
+            body = re.sub(rf"(?im)^(\s*{re.escape(key)}\s*=\s*)([-0-9.]+)",
+                          lambda mm: f"{mm.group(1)}{float(mm.group(2)) * factor:.4g}", body, count=1)
+        else:
+            body = f"{key} = {default * factor:.4g}\n" + body
+    for key in SIZE_LENGTHS:
+        body = re.sub(rf"(?im)^(\s*{re.escape(key)}\s*=\s*)(-?\d+)",
+                      lambda mm: f"{mm.group(1)}{max(1, round(int(mm.group(2)) * factor))}", body, count=1)
+    write(cns_path, text[:m.start(2)] + body + text[m.end(2):])
+    return True
+
+
+def match_heights(cfg):
+    """roster "fighter_height": "median" -> scale every fighter so it stands as tall as the median one
+    (tools/char_heights.py measures). Per character "height_scale": N overrides the computed factor
+    (1 = leave alone). Clamped to 0.4-1.6 so a bad measurement can't make anyone vanish or fill the screen."""
+    if cfg.get("fighter_height") != "median":
+        return
+    import statistics
+    import char_heights
+    rows = [r for r in char_heights.measure(ASSETS) if "height" in r]
+    if not rows:
+        return
+    median = statistics.median(r["height"] for r in rows)
+    overrides = {c["id"]: c["height_scale"] for c in cfg["characters"] if "height_scale" in c}
+    done = []
+    for r in rows:
+        factor = overrides.get(r["id"], median / r["height"])
+        factor = min(1.6, max(0.4, factor))
+        if abs(factor - 1) < 0.04:
+            continue
+        folder = os.path.dirname(r["def"])
+        d = read(r["def"])
+        cns = char_heights.files_key(d, "cns")
+        path = char_heights.find_ci(folder, cns) if cns else None
+        if path and scale_size_section(path, factor):
+            done.append(f"{r['id']} x{factor:.2f}")
+    log(f"5b. fighter heights -> median {median:.0f} px: {', '.join(done) or 'nothing to change'}")
+
+
 def main():
     with open(os.path.join(ROOT, "roster.json"), encoding="utf-8") as f:
         cfg = json.load(f)
     music = "--no-music" not in sys.argv
     no_shrink = "--no-shrink" in sys.argv
+    minify = "--no-minify" not in sys.argv
+    prune_states = "--prune-states" in sys.argv
+    prune_sprites = "--prune-sprites" in sys.argv
+    skip_missing = "--skip-missing" in sys.argv
+    if "--motif" in sys.argv:  # try a motif without editing roster.json
+        cfg["motif"] = sys.argv[sys.argv.index("--motif") + 1]
     demo = os.path.join(ROOT, cfg["demo_root"])
     music_cache = os.path.join(ROOT, "build", "ogg-cache")
 
@@ -154,8 +285,16 @@ def main():
         cid = c["id"]
         if c.get("source") == "stock":
             entry = c.get("def", cid)
+            stock_def = os.path.join(ASSETS, "chars", cid, f"{cid}.def")
+            if os.path.isfile(stock_def):
+                changes = compress_copied_character(stock_def, os.path.join(ASSETS, "data"),
+                                                    minify, prune_states, prune_sprites)
+                log(f"2. char {cid:10s} <- stock  {'; '.join(changes) or 'compression disabled'}")
         else:
             src = os.path.join(ROOT, c["root"], c["folder"]) if "root" in c else os.path.join(demo, "Chars", c["folder"])
+            if skip_missing and not os.path.isdir(src):
+                log(f"2. char {cid:10s} SKIPPED: {os.path.relpath(src, ROOT)} not found (--skip-missing)")
+                continue
             dst = os.path.join(ASSETS, "chars", cid)
             shutil.copytree(src, dst)
             for rel_src, rel_dst in c.get("copy_files", []):  # e.g. a common*.cns the char expects
@@ -172,6 +311,30 @@ def main():
                         dropped += 1
             def_path = os.path.join(dst, c["def"])
             changes = patch_char_def(def_path, c["localcoord"] if "localcoord" in c else KEEP, c.get("def_overrides"))
+            padding = strip_cls_padding(os.path.dirname(def_path))
+            if padding:
+                changes.append(f"stripped {padding} '&cls' padding lines from scripts")
+            if c.get("portraits"):
+                # wrong/missing select-screen portraits: rebuild 9000,0 and 9000,1 from another sprite
+                import fix_portraits
+                spr = re.search(r"(?im)^\s*sprite\s*=\s*([^;\r\n]+)", read(def_path)).group(1).strip()
+                air = "".join(read(os.path.join(dst, f)) for f in os.listdir(dst) if f.lower().endswith(".air"))
+                used = {(9000, int(m)) for m in re.findall(r"(?m)^\s*9000\s*,\s*(\d+)\s*,", air)}
+                changes.append(fix_portraits.fix(os.path.join(dst, spr), c["portraits"]["from"], used,
+                                                 c["portraits"].get("slots", ("icon", "big"))))
+            if c.get("sprite_cap"):
+                # read by the Vita engine (tools/engine/patches/0002): this fighter's sprites above N px
+                # are stored downscaled; other fighters keep the engine default (512)
+                d = read(def_path)
+                d = re.sub(r"(?im)^(\s*\[info\][^\n]*\n)", lambda m: f"{m.group(1)}jfv.spritecap = {int(c['sprite_cap'])}\n", d, count=1)
+                write(def_path, d)
+                changes.append(f"jfv.spritecap {c['sprite_cap']}")
+            fixes = c.get("script_fixes", [])
+            if fixes:
+                apply_script_fixes(dst, fixes)
+                changes.append(f"applied {len(fixes)} script fixes")
+            changes.extend(compress_copied_character(def_path, os.path.join(ASSETS, "data"),
+                                                      minify, prune_states, prune_sprites))
             snd = re.search(r"(?im)^\s*sound\s*=\s*([^;\r\n]+)", read(def_path))
             if snd and not no_shrink:
                 sp = os.path.join(dst, snd.group(1).strip())
@@ -216,6 +379,13 @@ def main():
              "team.maxmatches = 4,1,1,0,0,0,0,0,0,0", ""]
     write(os.path.join(ASSETS, "data", "select.def"), "\n".join(lines))
     log(f"5. select.def: {len(select_chars)} characters, {len(extra_stages)} stages")
+    # every stage a character fights on must exist, or that fight crashes on load
+    missing = sorted({s.split(",")[1].strip() for s in select_chars if "," in s}
+                     - {f"stages/{f}" for f in os.listdir(os.path.join(ASSETS, "stages"))})
+    if missing:
+        raise SystemExit(f"select.def points at stages that are not in the build: {', '.join(missing)} "
+                         "(give the character a full stage entry with id/def/music in roster.json)")
+    match_heights(cfg)
 
     slots = len(select_chars) + (1 if cfg.get("randomselect") else 0)
     if cfg.get("motif") != "tbm":
@@ -225,14 +395,42 @@ def main():
         rows = -(-slots // cols)
         sysdef = os.path.join(ASSETS, "data", "system.def")
         t = read(sysdef)
-        grid = {"rows": rows, "columns": cols, "pos": f"{(320 - cols * 29) // 2},{min(170, 236 - rows * 29)}",
+        top = min(170, 236 - rows * 29)
+        grid = {"rows": rows, "columns": cols, "pos": f"{(320 - cols * 29) // 2},{top}",
                 "p2.cursor.startcell": f"0,{cols - 1}"}
+        if top < 170:
+            # the stock layout puts 120x140 portraits at y=13 and the names/stage at y=162/237: a taller
+            # grid would run over them, so shrink the portraits to end above the name line, and put the
+            # names in the gap just above the grid (the stage name goes under the title: long names reach the middle)
+            label_y = top - 6
+            face = round(min(1.0, (label_y - 12 - 13) / 140), 2)
+            grid.update({"p1.face.scale": f"{face},{face}", "p2.face.scale": f"{face},{face}",
+                         "p1.name.offset": f"10,{label_y}", "p2.name.offset": f"309,{label_y}",
+                         "stage.pos": "160,30"})  # under the title, between the portraits
         sel = re.search(r"(?is)\[Select Info\](.*?)(?=\n\[)", t)
         body = sel.group(1)
         for k, v in grid.items():
             body = re.sub(rf"(?im)^(\s*{re.escape(k)}\s*=\s*)[^;\n]*", lambda m, v=v: f"{m.group(1)}{v}", body)
-        write(sysdef, t[:sel.start(1)] + body + t[sel.end(1):])
+        t = t[:sel.start(1)] + body + t[sel.end(1):]
+        if top < 170:
+            # [SelectBG 1] "Dark box" (a 320x62 trans=sub strip, tiled sideways) shades the stock 2-row grid at
+            # y=166 inside window x 85-235. Re-fit it to the bigger grid: start at the grid's top, tile down too,
+            # and clip it to the grid's outline -- otherwise it shows as a stray dark rectangle over the cells.
+            x0 = (320 - cols * 29) // 2
+            box = {"start": f"0, {top - 2}", "tile": "1,1",
+                   "window": f"{x0 - 2},{top - 2}, {x0 + cols * 29},{top + rows * 29}"}
+            bg = re.search(r"(?is)\[SelectBG 1\][^\n]*\n(.*?)(?=\n\[)", t)
+            if bg:
+                body = bg.group(1)
+                for k, v in box.items():
+                    body = re.sub(rf"(?im)^(\s*{re.escape(k)}\s*=\s*)[^;\n]*", lambda m, v=v: f"{m.group(1)}{v}", body)
+                t = t[:bg.start(1)] + body + t[bg.end(1):]
+        write(sysdef, t)
         log(f"6. stock select grid -> {rows}x{cols} for {slots} slots")
+
+    if cfg.get("motif") == "jfv":
+        make_ui.main()
+        log("6. motif: Jump Force Vita UI (tools/make_ui.py -> data/jfv, font/jfv_*.fnt)")
 
     if cfg.get("motif") == "tbm":
         fonts = port_motif.port(ASSETS, len(select_chars) + (1 if cfg.get("randomselect") else 0))

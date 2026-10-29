@@ -36,6 +36,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "build", "game", "assets")
 MB = 2 ** 20
+CAPS = (1024, 768, 640, 512, 384, 256)  # candidate max sprite dimensions for the downscale what-if
 
 
 def read(p):
@@ -67,6 +68,7 @@ class Cost:
         self.too_big = []      # sprites > 4096 px: engine aborts
         self.bad_format = []   # RLE5 etc.: engine error
         self.engine_p8 = 0     # what-if: engine keeps every 8-bit sprite as P8 + its own palette
+        self.engine_p8_cap = {}  # what-if: P8 + fighter sprites larger than N px stored downscaled
         self.reorder = None    # what-if (SFF v1): main-palette sprites written first
 
     @property
@@ -77,7 +79,11 @@ class Cost:
         if w > 4096 or h > 4096:
             self.too_big.append(key)
             return
-        self.engine_p8 += tex_bytes(w, h, 1 if paletted else 4) + (1024 if paletted and not eight else 0)
+        bpp = 1 if paletted else 4
+        self.engine_p8 += tex_bytes(w, h, bpp) + (1024 if paletted and not eight else 0)
+        for cap in CAPS:
+            k = -(-max(w, h) // cap)  # integer downscale factor (patch 0002)
+            self.engine_p8_cap[cap] = self.engine_p8_cap.get(cap, 0) + tex_bytes(-(-w // k), -(-h // k), bpp)
         if eight:
             self.p8 += tex_bytes(w, h, 1)
             self.n8 += 1
@@ -172,8 +178,10 @@ def char_files(def_path):
           for m in re.finditer(r"(?im)^\s*([a-z0-9.]+)\s*=\s*([^\r\n;]*)", files)}
     get = lambda k: find_ci(folder, kv[k]) if kv.get(k) else None
     scripts = [get(k) for k in kv if re.match(r"(cmd|cns|st\d*|anim)$", k)]
+    cap = re.search(r"(?im)^\s*jfv\.spritecap\s*=\s*(\d+)", t)
     return {"sprite": get("sprite"), "sound": get("sound"), "pal1": get("pal1"), "pal2": get("pal2"),
-            "script_bytes": sum(os.path.getsize(s) for s in scripts if s)}
+            "script_bytes": sum(os.path.getsize(s) for s in scripts if s),
+            "sprite_cap": int(cap.group(1)) if cap else 512}
 
 
 def roster():
@@ -212,7 +220,9 @@ def main():
         heap, nsnd = snd_heap(f["sound"]) if f["sound"] else (0, 0)
         if stage not in stages:
             stages[stage] = stage_cost(stage)
-        rows.append({"id": cid, "sff": ver, "sff_mb": os.path.getsize(f["sprite"]) / MB,
+        if f["sprite_cap"] not in CAPS:
+            print(f"note: {cid} jfv.spritecap {f['sprite_cap']} isn't one of {CAPS}; patched column uses 512")
+        rows.append({"id": cid, "cap": f["sprite_cap"], "sff": ver, "sff_mb": os.path.getsize(f["sprite"]) / MB,
                      "p1": p1, "p2": p2, "nopal": nopal, "snd_heap": heap, "nsnd": nsnd,
                      "script_kb": f["script_bytes"] / 1024, "stage": stage, "stage_tex": stages[stage].total})
 
@@ -233,6 +243,21 @@ def main():
               f"{p1.p8 / MB:6.1f}/{p1.argb / MB:6.1f} {r['nopal'].total / MB:7.1f} "
               f"{(p1.reorder / MB if p1.reorder is not None else float('nan')):8.1f} {p1.engine_p8 / MB:7.1f} "
               f"{r['snd_heap'] / MB:8.1f} {r['script_kb'] / 1024:8.1f} {mirror:7.1f}  {'; '.join(flags)}")
+    print("\npatched engine (0001 P8 + 0002 cap; cap = jfv.spritecap or 512), texture MB:")
+    print(f"{'id':22} {'cap':>4} {'fighter':>8} {'mirror':>8}")
+    worst = []
+    for r in rows:
+        one = r["p1"].engine_p8_cap.get(r["cap"], r["p1"].engine_p8_cap[512]) / MB
+        worst.append((one, r["id"]))
+        print(f"{r['id']:22} {r['cap']:4d} {one:8.1f} {2 * one:8.1f}")
+    worst.sort(reverse=True)
+    if len(worst) > 1:
+        print(f"worst pairing: {worst[0][1]} + {worst[1][1]} = {worst[0][0] + worst[1][0]:.1f} MB (+ stage); "
+              f"worst mirror: {worst[0][1]} = {2 * worst[0][0]:.1f} MB")
+    print("\nwith engine P8 + downscaling fighter sprites larger than N px (texture MB per fighter):")
+    print(f"{'id':22} " + " ".join(f"{'<=' + str(c):>8}" for c in CAPS))
+    for r in rows:
+        print(f"{r['id']:22} " + " ".join(f"{r['p1'].engine_p8_cap.get(c, 0) / MB:8.1f}" for c in CAPS))
     if "--csv" in sys.argv:
         import csv
         out = sys.argv[sys.argv.index("--csv") + 1]
