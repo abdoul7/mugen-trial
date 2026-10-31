@@ -1,4 +1,4 @@
-"""make_legends.py -- build the Legends mode data the engine reads (patch 0010, legendsmode.cpp).
+"""make_legends.py -- build the Legends mode data the engine reads (patch 0014, legendsmode.cpp).
 
     python tools/legends/make_legends.py [assets dir]   # default build/game/assets
 

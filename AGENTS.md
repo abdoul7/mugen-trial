@@ -89,7 +89,7 @@ what is tested and what isn't: `reports/legends-status.md`.
 
 - Rules live in `tools/legends/engine/legendscore.cpp`: plain C++ with no engine dependency.
   Unit tests: `python tools/legends/make_legends.py --no-art && bash tools/legends/tests/run.sh`.
-- The engine side is `legendsmode.cpp` plus patch 0010. `build_vita.sh` copies
+- The engine side is `legendsmode.cpp` plus patch 0014. `build_vita.sh` copies
   `tools/legends/engine/*` into the engine tree. It runs only on the Vita build: test in Vita3K
   with `tools/legends/vita3k_legends_autotest.py`, which is hands-off.
 - Cards are data: `tools/legends/catalog.json`. A card without a safe implementation stays

@@ -60,7 +60,7 @@ mkdir -p "$WORK"
 for d in repo prism vitasound vita2d; do
   tar -C "$SRC" --exclude=.git -cf - "$d" | tar -C "$WORK" -xf -
 done
-# our own engine sources (Legends mode: tools/legends/engine), compiled in by patch 0010
+# our own engine sources (Legends mode: tools/legends/engine), compiled in by patch 0014
 cp "$REPO"/tools/legends/engine/*.cpp "$REPO"/tools/legends/engine/*.h "$WORK/repo/"
 # Makefiles/CMakeLists/sources come with CRLF from Windows checkouts
 find "$WORK" -type f \( -name 'Makefile*' -o -name 'CMakeLists.txt' -o -name 'CmakeLists.txt' -o -name '*.cmake' \

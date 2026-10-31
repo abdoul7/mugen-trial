@@ -629,7 +629,7 @@ def bg(name, **kv):
 #            can never pick a fighter; restore it once two-pad input exists
 MENU_ITEMS = [
     ("arcade", "ARCADE", "Fight a ladder of CPU opponents, one match after another."),
-    # engine patch 0010 (tools/legends): needs the Vita build; a stock engine skips the item
+    # engine patch 0014 (tools/legends): needs the Vita build; a stock engine skips the item
     ("legends", "LEGENDS", "Coach a squad of three. The fighters are CPU, you play the cards."),
     ("freeplay", "FREE PLAY", "Pick your fighter, the opponent and the stage, then fight the CPU."),
     ("survival", "SURVIVAL", "One health bar against an endless line of CPU fighters."),

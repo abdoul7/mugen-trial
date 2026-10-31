@@ -15,7 +15,7 @@ testing are the owner's.
 | Unit tests | `tools/legends/tests/test_legendscore.cpp`, `run.sh` | 301 checks pass, also under ASan + UBSan |
 | Engine mode: squad select, opening deal, relay, results, rematch | `tools/legends/engine/legendsmode.cpp` | done |
 | In-fight HUD: 3-card dock, Hype rail, tickets, armed/cooldown state, inspect, banners, squad pips, Awakening timer, bout clock | same | done (layout validated on one stage only, see below) |
-| Engine hooks | `tools/engine/patches/0010-legends-mode-hooks.patch` | `GAME_MODE_LEGENDS`, menu item, fight actor, AI coaching, damage scale, autotest |
+| Engine hooks | `tools/engine/patches/0014-legends-mode-hooks.patch` | `GAME_MODE_LEGENDS`, menu item, fight actor, AI coaching, damage scale, autotest |
 | Data | `tools/legends/catalog.json`, `adapters.json` -> `data/legends/*.txt` | 12 cards, 7 enabled; 2 verified adapters |
 | HUD sprites | `tools/legends/legends_art.py` -> `data/legends/legends.sff` | 127 sprites, about 448 KB on disk with the local kit; faces, thumbnails, frames and animated VFX |
 | Hands-off test | `tools/legends/vita3k_legends_autotest.py` + `legends_autotest.txt` | runs a CPU-coach vs CPU-coach encounter to the results |

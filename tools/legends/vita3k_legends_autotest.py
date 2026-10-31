@@ -1,4 +1,4 @@
-"""vita3k_legends_autotest.py -- a hands-off Legends encounter in Vita3K (engine patch 0010).
+"""vita3k_legends_autotest.py -- a hands-off Legends encounter in Vita3K (engine patch 0014).
 
     python tools/legends/vita3k_legends_autotest.py <out dir> --seed 1234 --attach 1 \
         --p1 kfm/kfm.def,pupa/Pupa.def,bender/ben.def --p2 lucario/Lucario.def,gouken/gouken.def,janemba/janemba.def
