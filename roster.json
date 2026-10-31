@@ -6,77 +6,6 @@
   "arcade_maxmatches": "6,1,1,0,0,0,0,0,0,0",
   "characters": [
     {
-      "id": "kfm",
-      "source": "stock",
-      "def": "kfm",
-      "stage": {
-        "source": "stock",
-        "def": "stages/kfm.def"
-      }
-    },
-    {
-      "id": "pupa",
-      "folder": "Rage of The Dragons/Pupa",
-      "def": "Pupa.def",
-      "localcoord": null,
-      "stage": {
-        "id": "rschool",
-        "def": "RageofTheDragons/Rschool.def",
-        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
-      }
-    },
-    {
-      "id": "bender",
-      "folder": "Cartoon/bender",
-      "def": "bender.def",
-      "localcoord": null,
-      "stage": {
-        "id": "ship",
-        "def": "Cartoon/ship.def",
-        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
-      },
-      "snd_rate": 16000
-    },
-    {
-      "id": "lucario",
-      "folder": "Pokemon/Lucario_M",
-      "def": "Lucario_M.def",
-      "localcoord": null,
-      "stage": {
-        "id": "snorlax",
-        "def": "Pokemon/Snorlax.def",
-        "music": "Sound/Pokemon/47. Poke Flute.mp3"
-      },
-      "copy_files": [
-        [
-          "Data/common2.cns",
-          "common2.cns"
-        ]
-      ]
-    },
-    {
-      "id": "goenitz",
-      "folder": "KOF/Goenitz",
-      "def": "Goenitz.def",
-      "localcoord": null,
-      "stage": {
-        "id": "kof96goe",
-        "def": "KOF/96/KOF96_Goenitz_Stage.def",
-        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
-      }
-    },
-    {
-      "id": "gouken",
-      "folder": "Street Fighter/gouken",
-      "def": "gouken.def",
-      "localcoord": null,
-      "stage": {
-        "id": "sfa3akuma",
-        "def": "StreetFighter/sfa3akuma.def",
-        "music": "Sound/StreetFighter/akumasfa3.mp3"
-      }
-    },
-    {
       "id": "janemba",
       "folder": "Dragonball/janemba",
       "def": "janemba.def",
@@ -99,8 +28,9 @@
       "def": "Android 17.def",
       "source_note": "AK1 download (Android 17.zip), triage TEST: big sprites 17.3 MB; 132x trans=sub (not implemented on Vita: some effects will look wrong); snd 23.3 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/sfa3akuma.def"
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
       },
       "snd_rate": 16000
     },
@@ -111,8 +41,9 @@
       "def": "Android 21.def",
       "source_note": "AK1 download (Android 21 1.1.rar), triage TEST: big sprites 22.9 MB; 24x trans=sub (not implemented on Vita: some effects will look wrong); snd 24.0 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
       },
       "snd_rate": 16000
     },
@@ -123,8 +54,9 @@
       "def": "Android_18.def",
       "source_note": "AK1 download (Android_18 (1).rar), triage TEST: big sprites 25.8 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 7.9 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/rschool.def"
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
       }
     },
     {
@@ -134,8 +66,9 @@
       "def": "Baby Vegeta.def",
       "source_note": "AK1 download (Baby_Vegeta.rar), triage TEST: big sprites 18.3 MB; 48x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.9 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
       },
       "drop_files": [
         "backup"
@@ -154,19 +87,9 @@
       "def": "Bardock SSJ.def",
       "source_note": "AK1 download (Bardock_SSJ.zip), triage TEST: big sprites 28.4 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 17.3 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/snorlax.def"
-      }
-    },
-    {
-      "id": "garou_hunters",
-      "root": "source/jf",
-      "folder": "garou_hunters/Garou-Hunters",
-      "def": "Garou-Hunters.def",
-      "source_note": "AK1 download (Garou-Hunters.rar), triage TEST: 7x trans=sub (not implemented on Vita: some effects will look wrong)",
-      "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
       }
     },
     {
@@ -188,8 +111,9 @@
       "def": "Kefla.def",
       "source_note": "AK1 download (Kefla.rar), triage TEST: big sprites 22.9 MB; 82x trans=sub (not implemented on Vita: some effects will look wrong); snd 40.7 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/sfa3akuma.def"
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
       },
       "snd_rate": 16000
     },
@@ -200,8 +124,9 @@
       "def": "Metal Bat.def",
       "source_note": "AK1 download (Metal_Bat.rar), triage TEST: big sprites 16.2 MB; 46x trans=sub (not implemented on Vita: some effects will look wrong); snd 18.3 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
       }
     },
     {
@@ -211,8 +136,9 @@
       "def": "Sasuke_Hebi_White.def",
       "source_note": "AK1 download (Sasuke_Hebi_White.rar), triage TEST: big sprites 22.5 MB; 6x trans=sub (not implemented on Vita: some effects will look wrong); snd 6.7 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
       }
     },
     {
@@ -222,8 +148,9 @@
       "def": "Tank-top-master.def",
       "source_note": "AK1 download (Tank-top-master.rar), triage TEST: big sprites 21.5 MB; 2x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.6 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
       }
     },
     {
@@ -233,8 +160,9 @@
       "def": "Tenshinhan Saga Cell.def",
       "source_note": "AK1 download (Tenshinhan Saga Cell.rar), triage TEST: big sprites 20.1 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong)",
       "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
       }
     },
     {
@@ -244,8 +172,9 @@
       "def": "Vegito (SSB).def",
       "source_note": "AK1 download (Vegito (SSB).zip), triage TEST: big sprites 16.0 MB; 75x trans=sub (not implemented on Vita: some effects will look wrong); missing palette files dropped: pal1=1.act; snd 30.0 MB (will be shrunk)",
       "stage": {
-        "source": "stock",
-        "def": "stages/rschool.def"
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
       },
       "snd_rate": 16000
     },
@@ -256,8 +185,9 @@
       "def": "Madara Revived.def",
       "source_note": "AK1 download (Madara_Revived.zip), triage REJECT: sprites 31.0 MB (> 30)",
       "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
       }
     },
     {
@@ -267,8 +197,9 @@
       "def": "Gohan_Teen_JUS_K.def",
       "source_note": "AK1 download (Gohan_Teen_JUS_K.rar); was rejected on sprite-file size (35.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 43 MB of textures per fighter.",
       "stage": {
-        "source": "stock",
-        "def": "stages/sfa3akuma.def"
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
       }
     },
     {
@@ -278,8 +209,9 @@
       "def": "Hiruzen.def",
       "source_note": "AK1 download (Hiruzen.rar); was rejected on sprite-file size (43.7 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 65 MB of textures per fighter.",
       "stage": {
-        "source": "stock",
-        "def": "stages/kof96goe.def"
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
       },
       "snd_rate": 16000
     },
@@ -290,8 +222,9 @@
       "def": "Kawashiki.def",
       "source_note": "AK1 download (Kawashiki.rar); was rejected on sprite-file size (33.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 74 MB of textures per fighter.",
       "stage": {
-        "source": "stock",
-        "def": "stages/rschool.def"
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
       }
     },
     {
@@ -301,8 +234,9 @@
       "def": "Otsutsuki_Kaguya.def",
       "source_note": "AK1 download (Otsutsuki_Kaguya v1.0.rar); was rejected on sprite-file size (53.0 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 60 MB of textures per fighter with its own sprite cap 256.",
       "stage": {
-        "source": "stock",
-        "def": "stages/ship.def"
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
       },
       "sprite_cap": 256,
       "snd_rate": 11025
@@ -321,8 +255,9 @@
       ],
       "source_note": "AK1 download (Androide-C-18.zip); was rejected on sprite-file size (113.6 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 86 MB of textures per fighter with its own sprite cap 256.",
       "stage": {
-        "source": "stock",
-        "def": "stages/snorlax.def"
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
       },
       "sprite_cap": 256,
       "snd_rate": 11025
@@ -334,11 +269,234 @@
       "def": "Ichibe Hyosube V2.def",
       "source_note": "AK1 download (Ichibe_Hyosube_V2_by_DonTuatua.rar); was rejected on sprite-file size (162.5 MB). With the patched Vita engine (0001 P8 + 0002 cap) tools/vita_mem.py predicts 110 MB of textures per fighter with its own sprite cap 256.",
       "stage": {
-        "source": "stock",
-        "def": "stages/sfa3akuma.def"
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
       },
       "sprite_cap": 256,
       "snd_rate": 16000
+    },
+    {
+      "id": "ems_sasuke",
+      "root": "source/jf",
+      "folder": "ems_sasuke/EMS Sasuke",
+      "def": "EMS Sasuke.def",
+      "source_note": "AK1 download (EMS_Sasuke.rar), batch 2 (Issa). tools/vita_mem.py: ~7 MB textures per fighter.",
+      "stage": {
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
+      }
+    },
+    {
+      "id": "aizen",
+      "root": "source/jf",
+      "folder": "aizen_by_dopefiend/Aizen",
+      "def": "Aizen.def",
+      "source_note": "AK1 download (Aizen by DopeFiend.rar), batch 2 (Issa). tools/vita_mem.py: ~16 MB textures per fighter.",
+      "stage": {
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+      }
+    },
+    {
+      "id": "yoko_kurama",
+      "root": "source/jf",
+      "folder": "yoko_kurama_g1/Yoko_Kurama_G1",
+      "def": "Yoko_Kurama_G1.def",
+      "source_note": "AK1 download (Yoko_Kurama_G1.rar), batch 2 (Issa). tools/vita_mem.py: ~20 MB textures per fighter.",
+      "stage": {
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+      }
+    },
+    {
+      "id": "toshiro",
+      "root": "source/jf",
+      "folder": "toshiro_hitsugaya/Toshiro_Hitsugaya",
+      "def": "Toshiro_Hitsugaya.def",
+      "source_note": "AK1 download (Toshiro_Hitsugaya.rar), batch 2 (Issa). tools/vita_mem.py: ~20 MB textures per fighter.",
+      "stage": {
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
+      }
+    },
+    {
+      "id": "ichigo",
+      "root": "source/jf",
+      "folder": "ichigo/Ichigo",
+      "def": "Ichigo.def",
+      "source_note": "AK1 download (Ichigo.zip), batch 2 (Issa). tools/vita_mem.py: ~21 MB textures per fighter.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kfm.def"
+      }
+    },
+    {
+      "id": "caulifla",
+      "root": "source/jf",
+      "folder": "caulifla/Caulifla",
+      "def": "Caulifla.def",
+      "source_note": "AK1 download (Caulifla.rar), batch 2 (Issa). tools/vita_mem.py: ~25 MB textures per fighter.",
+      "stage": {
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
+      }
+    },
+    {
+      "id": "sasori",
+      "root": "source/jf",
+      "folder": "sasori/Sasori",
+      "def": "Sasori.def",
+      "source_note": "AK1 download (Sasori.rar), batch 2 (Issa). tools/vita_mem.py: ~34 MB textures per fighter.",
+      "stage": {
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
+      }
+    },
+    {
+      "id": "byakuya",
+      "root": "source/jf",
+      "folder": "byakuya/Byakuya",
+      "def": "Byakuya.def",
+      "source_note": "AK1 download (Byakuya.rar), batch 2 (Issa). tools/vita_mem.py: ~36 MB textures per fighter.",
+      "stage": {
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+      }
+    },
+    {
+      "id": "sbob",
+      "root": "source/jf",
+      "folder": "sbobthesnge/SbobTheSnge",
+      "def": "SbobTheSnge.def",
+      "source_note": "AK1 download (SbobTheSnge.zip), batch 2 (Issa). tools/vita_mem.py: ~38 MB textures per fighter.",
+      "stage": {
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+      }
+    },
+    {
+      "id": "pain",
+      "root": "source/jf",
+      "folder": "pain_hr/Pein HR/Pain HR",
+      "def": "Pain HR.def",
+      "source_note": "AK1 download (Pain_HR.rar), batch 2 (Issa). tools/vita_mem.py: ~38 MB textures per fighter.",
+      "stage": {
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
+      }
+    },
+    {
+      "id": "minato_kcm",
+      "root": "source/jf",
+      "folder": "g6_minato_kcm/G6_Minato_KCM",
+      "def": "G6_Minato_KCM.def",
+      "source_note": "AK1 download (G6_Minato_KCM.zip), batch 2 (Issa). tools/vita_mem.py: ~38 MB textures per fighter.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kfm.def"
+      }
+    },
+    {
+      "id": "hidan",
+      "root": "source/jf",
+      "folder": "hidan/Hidan",
+      "def": "Hidan.def",
+      "source_note": "AK1 download (Hidan.rar), batch 2 (Issa). tools/vita_mem.py: ~20 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "id": "sfa3akuma",
+        "def": "StreetFighter/sfa3akuma.def",
+        "music": "Sound/StreetFighter/akumasfa3.mp3"
+      },
+      "sprite_cap": 256
+    },
+    {
+      "id": "king_piccolo",
+      "root": "source/jf",
+      "folder": "king_piccolo/King Piccolo",
+      "def": "King Piccolo.def",
+      "source_note": "AK1 download (King_Piccolo.rar), batch 2 (Issa). tools/vita_mem.py: ~19 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "id": "kof96goe",
+        "def": "KOF/96/KOF96_Goenitz_Stage.def",
+        "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
+      },
+      "sprite_cap": 256
+    },
+    {
+      "id": "naruto_ashura",
+      "root": "source/jf",
+      "folder": "naruto_ashura/Naruto_Ashura",
+      "def": "Naruto_Ashura.def",
+      "source_note": "AK1 download (Naruto_Ashura.zip), batch 2 (Issa). tools/vita_mem.py: ~20 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "id": "rschool",
+        "def": "RageofTheDragons/Rschool.def",
+        "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+      },
+      "sprite_cap": 256,
+      "portraits": {
+        "from": [
+          9000,
+          1
+        ],
+        "slots": [
+          "big"
+        ]
+      }
+    },
+    {
+      "id": "vegeta_ssjg",
+      "root": "source/jf",
+      "folder": "ssjg_vegetaz2i/SSJG_VegetaZ2i",
+      "def": "SSJG_VegetaZ2i.def",
+      "source_note": "AK1 download (SSJG_VegetaZ2i.rar), batch 2 (Issa). tools/vita_mem.py: ~37 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "id": "ship",
+        "def": "Cartoon/ship.def",
+        "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+      },
+      "sprite_cap": 256
+    },
+    {
+      "id": "shimakaze",
+      "root": "source/jf",
+      "folder": "simikaze/simikaze",
+      "def": "simikaze.def",
+      "source_note": "AK1 download (simikaze.zip), batch 2 (Issa). tools/vita_mem.py: ~35 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "id": "snorlax",
+        "def": "Pokemon/Snorlax.def",
+        "music": "Sound/Pokemon/47. Poke Flute.mp3"
+      },
+      "sprite_cap": 256
+    },
+    {
+      "id": "naruto_baryon",
+      "root": "source/jf",
+      "folder": "naruto_baryon_2/Naruto Baryon",
+      "def": "Naruto Baryon.def",
+      "source_note": "AK1 download (Naruto Baryon(2).rar), batch 2 (Issa). tools/vita_mem.py: ~30 MB textures per fighter with sprite cap 256.",
+      "stage": {
+        "source": "stock",
+        "def": "stages/kfm.def"
+      },
+      "sprite_cap": 256,
+      "portraits": {
+        "from": [
+          9000,
+          1
+        ]
+      }
     }
   ],
   "snd_rate": 22050,
@@ -418,6 +576,165 @@
         "snd_rate": 11025,
         "def_overrides": {
           "stcommon": "common1.cns"
+        }
+      }
+    },
+    {
+      "id": "broly",
+      "reason": "Vita3K: emulator crashes while loading his scripts, right after States/Supers.st (heap 3.5 MB, so not memory): probably script syntax Dolmexica cannot handle. Bisect his 21 script files.",
+      "entry": {
+        "id": "broly",
+        "root": "source/jf",
+        "folder": "broly_mugen11_by_mr_ansatsuken_19_12_2019/Broly-Mugen11",
+        "def": "Broly-Mugen11.def",
+        "source_note": "AK1 download (Broly-Mugen11 by Mr Ansatsuken (19-12-2019).rar), batch 2 (Issa). Ambitious: sprites over 4096 px (engine limit) -- relies on sprite_cap 256 storing them downscaled; scripts large.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kfm.def"
+        },
+        "sprite_cap": 256,
+        "snd_rate": 16000
+      }
+    },
+    {
+      "id": "goku_ui",
+      "reason": "Vita3K: Out of main memory loading Goku.sff (heap only 31 of 128 MB used): sprites over 4096 px are decoded full-size before the sprite cap shrinks them. Needs an engine change that downscales while decoding.",
+      "entry": {
+        "id": "goku_ui",
+        "root": "source/jf",
+        "folder": "dbfz_goku_ui_v2/DBFZ Goku UI",
+        "def": "DBFZ Goku UI.def",
+        "source_note": "AK1 download (DBFZ Goku UI v2.rar), batch 2 (Issa). Ambitious: sprites over 4096 px (engine limit) -- relies on sprite_cap 256 storing them downscaled; scripts large.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/rschool.def"
+        },
+        "sprite_cap": 256,
+        "snd_rate": 16000
+      }
+    },
+    {
+      "id": "kfm",
+      "reason": "Roster review (reports/char-review.csv): engine mascot; smallest move set (49 states, 3 supers). Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "kfm",
+        "source": "stock",
+        "def": "kfm",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kfm.def"
+        }
+      }
+    },
+    {
+      "id": "pupa",
+      "reason": "Roster review (reports/char-review.csv): demo character; missing KO/win/intro animations, no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "pupa",
+        "folder": "Rage of The Dragons/Pupa",
+        "def": "Pupa.def",
+        "localcoord": null,
+        "stage": {
+          "id": "rschool",
+          "def": "RageofTheDragons/Rschool.def",
+          "music": "Sound/RageofTheDragons/Rage of the Dragons OST - Cheer Up! ~Pepe & Pupa~.mp3"
+        }
+      }
+    },
+    {
+      "id": "bender",
+      "reason": "Roster review (reports/char-review.csv): demo character (Futurama); no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "bender",
+        "folder": "Cartoon/bender",
+        "def": "bender.def",
+        "localcoord": null,
+        "stage": {
+          "id": "ship",
+          "def": "Cartoon/ship.def",
+          "music": "Sound/Cartoon/Futurama Bender's Big Score- Battle for Earth Theme.mp3"
+        },
+        "snd_rate": 16000
+      }
+    },
+    {
+      "id": "lucario",
+      "reason": "Roster review (reports/char-review.csv): demo character; no CPU code. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "lucario",
+        "folder": "Pokemon/Lucario_M",
+        "def": "Lucario_M.def",
+        "localcoord": null,
+        "stage": {
+          "id": "snorlax",
+          "def": "Pokemon/Snorlax.def",
+          "music": "Sound/Pokemon/47. Poke Flute.mp3"
+        },
+        "copy_files": [
+          [
+            "Data/common2.cns",
+            "common2.cns"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "goenitz",
+      "reason": "Roster review (reports/char-review.csv): demo character (KOF); not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "goenitz",
+        "folder": "KOF/Goenitz",
+        "def": "Goenitz.def",
+        "localcoord": null,
+        "stage": {
+          "id": "kof96goe",
+          "def": "KOF/96/KOF96_Goenitz_Stage.def",
+          "music": "Sound/KOF/13-trash-head-goenitz-.mp3"
+        }
+      }
+    },
+    {
+      "id": "gouken",
+      "reason": "Roster review (reports/char-review.csv): demo character (SF); not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "gouken",
+        "folder": "Street Fighter/gouken",
+        "def": "gouken.def",
+        "localcoord": null,
+        "stage": {
+          "id": "sfa3akuma",
+          "def": "StreetFighter/sfa3akuma.def",
+          "music": "Sound/StreetFighter/akumasfa3.mp3"
+        }
+      }
+    },
+    {
+      "id": "garou_hunters",
+      "reason": "Roster review (reports/char-review.csv): very small sprite set (220 images); thin next to the rest. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "garou_hunters",
+        "root": "source/jf",
+        "folder": "garou_hunters/Garou-Hunters",
+        "def": "Garou-Hunters.def",
+        "source_note": "AK1 download (Garou-Hunters.rar), triage TEST: 7x trans=sub (not implemented on Vita: some effects will look wrong)",
+        "stage": {
+          "source": "stock",
+          "def": "stages/ship.def"
+        }
+      }
+    },
+    {
+      "id": "rare_akuma",
+      "reason": "Roster review (reports/char-review.csv): SF character; not in keeping with the roster. Owner: characters must feel complete and play well.",
+      "entry": {
+        "id": "rare_akuma",
+        "root": "source/jf",
+        "folder": "rareakuma",
+        "def": "RareAkuma.def",
+        "source_note": "AK1 download (RareAkuma.zip), batch 2 (Issa). tools/vita_mem.py: ~14 MB textures per fighter.",
+        "stage": {
+          "source": "stock",
+          "def": "stages/kof96goe.def"
         }
       }
     }

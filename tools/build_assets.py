@@ -320,7 +320,8 @@ def main():
                 spr = re.search(r"(?im)^\s*sprite\s*=\s*([^;\r\n]+)", read(def_path)).group(1).strip()
                 air = "".join(read(os.path.join(dst, f)) for f in os.listdir(dst) if f.lower().endswith(".air"))
                 used = {(9000, int(m)) for m in re.findall(r"(?m)^\s*9000\s*,\s*(\d+)\s*,", air)}
-                changes.append(fix_portraits.fix(os.path.join(dst, spr), c["portraits"]["from"], used))
+                changes.append(fix_portraits.fix(os.path.join(dst, spr), c["portraits"]["from"], used,
+                                                 c["portraits"].get("slots", ("icon", "big"))))
             if c.get("sprite_cap"):
                 # read by the Vita engine (tools/engine/patches/0002): this fighter's sprites above N px
                 # are stored downscaled; other fighters keep the engine default (512)
@@ -378,6 +379,12 @@ def main():
              "team.maxmatches = 4,1,1,0,0,0,0,0,0,0", ""]
     write(os.path.join(ASSETS, "data", "select.def"), "\n".join(lines))
     log(f"5. select.def: {len(select_chars)} characters, {len(extra_stages)} stages")
+    # every stage a character fights on must exist, or that fight crashes on load
+    missing = sorted({s.split(",")[1].strip() for s in select_chars if "," in s}
+                     - {f"stages/{f}" for f in os.listdir(os.path.join(ASSETS, "stages"))})
+    if missing:
+        raise SystemExit(f"select.def points at stages that are not in the build: {', '.join(missing)} "
+                         "(give the character a full stage entry with id/def/music in roster.json)")
     match_heights(cfg)
 
     slots = len(select_chars) + (1 if cfg.get("randomselect") else 0)

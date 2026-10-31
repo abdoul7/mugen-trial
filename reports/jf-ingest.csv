@@ -23,3 +23,28 @@ tenshinhan_saga_cell,Tenshinhan Saga Cell.rar,tenshinhan_saga_cell/Tenshinhan Sa
 uchiha_obito,Uchiha Obito.zip.001,,,,,,,,REJECT,no character .def found
 vegito_ssb,Vegito (SSB).zip,vegito_ssb/Vegito (SSB)/Vegito (SSB).def,Vegito (SSB),Doly P29,1.1,,16.0,30.0,TEST,big sprites 16.0 MB; 75x trans=sub (not implemented on Vita: some effects will look wrong); missing palette files dropped: pal1=1.act; snd 30.0 MB (will be shrunk)
 vegito,Vegito.rar,vegito/Vegito/Vegito.def,Vegito,Micheal22,1.1,,69.1,37.0,REJECT,missing files: stcommon=common1.dll
+aizen_by_dopefiend,Aizen by DopeFiend.rar,aizen_by_dopefiend/Aizen/Aizen.def,Aizen,DopeFiend,"04,14,2009",,6.3,10.3,TEST,snd 10.3 MB (will be shrunk)
+broly_mugen11_by_mr_ansatsuken_19_12_2019,Broly-Mugen11 by Mr Ansatsuken (19-12-2019).rar,broly_mugen11_by_mr_ansatsuken_19_12_2019/Broly-Mugen11/Broly-Mugen11.def,Broly,Mr.Ansatsuken,1.1,"320,240",39.3,39.2,REJECT,sprites 39.3 MB (> 30)
+byakuya,Byakuya.rar,byakuya/Byakuya/Byakuya.def,Byakuya,Websta,"01,18,2011",,17.6,12.7,TEST,big sprites 17.6 MB; snd 12.7 MB (will be shrunk)
+caulifla,Caulifla.rar,caulifla/Caulifla/Caulifla.def,Caulifla,Mikel8888,1.0,,19.8,12.6,TEST,big sprites 19.8 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 12.6 MB (will be shrunk)
+dbfz_goku_ui_v2,DBFZ Goku UI v2.rar,dbfz_goku_ui_v2/DBFZ Goku UI/DBFZ Goku UI.def,Goku (MUI),DCslayer,1.1,,137.0,55.3,REJECT,sprites 137.0 MB (> 30)
+ems_sasuke,EMS_Sasuke.rar,ems_sasuke/EMS Sasuke/EMS Sasuke.def,EMS Sasuke,LegendTTA,1.0,,4.0,2.2,TEST,8x trans=sub (not implemented on Vita: some effects will look wrong)
+g6_minato_kcm,G6_Minato_KCM.zip,g6_minato_kcm/G6_Minato_KCM/G6_Minato_KCM.def,Minato KCM,CobraG6,1.0,,22.6,12.0,TEST,big sprites 22.6 MB; 7x trans=sub (not implemented on Vita: some effects will look wrong); snd 12.0 MB (will be shrunk)
+g6_minato_kcm,G6_Minato_KCM.zip,g6_minato_kcm/G6_Minato_KCM/G6_Minato_KCM_unotag.def,Minato KCM,CobraG6,1.0,,22.6,12.0,REJECT,"missing files: cmd=G6_Minato_KCM_unotag\Minato KCM.cmd, st1=G6_Minato_KCM_unotag\IA.cns, st4=Clashs.cns, st9=G6_Minato_KCM_unotag\tag_system.cns"
+hidan,Hidan.rar,hidan/Hidan/G6_Hidan_unotag.def,Hidan,CobraG6,1.0,,16.3,18.5,REJECT,"missing files: cmd=G6_Hidan_unotag\Hidan.cmd, st1=G6_Hidan_unotag\IA.cns, st9=G6_Hidan_unotag\tag_system.cns"
+hidan,Hidan.rar,hidan/Hidan/Hidan.def,Hidan,Frak20,1.0,,16.3,18.5,TEST,big sprites 16.3 MB; 1x trans=sub (not implemented on Vita: some effects will look wrong); snd 18.5 MB (will be shrunk)
+ichigo,Ichigo.zip,ichigo/Ichigo/Ichigo.def,Ichigo,Ikaruga,"06,14,2003",,3.4,22.2,TEST,snd 22.2 MB (will be shrunk)
+ichigo,Ichigo.zip,ichigo/Ichigo/Ichigo_InnerHollow.def,Ichigo,Ikaruga,"06,14,2003",,3.6,0.0,REJECT,missing files: sound=Ichigo.snd
+king_piccolo,King_Piccolo.rar,king_piccolo/King Piccolo/King Piccolo.def,King Piccolo,Frak20,"author =""Frak20",,30.5,10.7,REJECT,sprites 30.5 MB (> 30)
+naruto_baryon_2,Naruto Baryon(2).rar,naruto_baryon_2/Naruto Baryon/Naruto Baryon.def,Naruto Baryon,(The Cube)Made In Argentina,1.0,,19.6,16.7,TEST,big sprites 19.6 MB; snd 16.7 MB (will be shrunk)
+naruto_ashura,Naruto_Ashura.zip,naruto_ashura/Naruto_Ashura/Naruto_Ashura.def,Naruto,Mikel8888,"author = ""Mikel8888",,19.6,10.1,TEST,big sprites 19.6 MB; 8x trans=sub (not implemented on Vita: some effects will look wrong); snd 10.1 MB (will be shrunk)
+pain_hr,Pain_HR.rar,pain_hr/Pein HR/Pain HR/Pain HR.def,Pain,werobe,"14,04,2002",,5.7,15.9,TEST,snd 15.9 MB (will be shrunk)
+rareakuma,RareAkuma.zip,rareakuma/RareAkuma.def,Rare Akuma,Phantom.of.the.Server,1.0,"320,240",6.8,6.8,TEST,snd 6.8 MB (will be shrunk)
+ssjg_vegetaz2i,SSJG_VegetaZ2i.rar,ssjg_vegetaz2i/SSJG_VegetaZ2i/SSJG_VegetaZ2i.def,God Vegeta,Team Z2,1.0,"320,240",11.3,44.3,TEST,snd 44.3 MB (will be shrunk)
+ssjg_vegetaz2i,SSJG_VegetaZ2i.rar,ssjg_vegetaz2i/SSJG_VegetaZ2i/Ultra Ego Z2i.def,U.E Vegeta,Team Z2,1.0,"320,240",11.3,44.3,TEST,snd 44.3 MB (will be shrunk)
+sasori,Sasori.rar,sasori/Sasori/Sasori.def,Sasori,Mikel8888 (edited by InSeph),1.0,,21.0,8.4,TEST,big sprites 21.0 MB; 3x trans=sub (not implemented on Vita: some effects will look wrong); snd 8.4 MB (will be shrunk)
+sbobthesnge,SbobTheSnge.zip,sbobthesnge/SbobTheSnge/SbobTheSnge.def,Spongebob,Place mario(AKA Felix2011),04.14.2001,,17.8,4.7,TEST,big sprites 17.8 MB
+toshiro_hitsugaya,Toshiro_Hitsugaya.rar,toshiro_hitsugaya/Toshiro_Hitsugaya/Toshiro_Hitsugaya.def,Hitsugaya,Ikaruga,"06,14,2003",,3.4,9.9,TEST,snd 9.9 MB (will be shrunk)
+yoko_kurama_g1,Yoko_Kurama_G1.rar,yoko_kurama_g1/Yoko_Kurama_G1/Yoko_Kurama_G1.def,Youko_Kurama_G1,GersonXBR,"04,14,2002",,22.6,5.3,TEST,big sprites 22.6 MB
+simikaze,simikaze.zip,simikaze/simikaze/simikaze.def,Shimakaze_ATM,AnToR_M,"11,22,2000",320,13.7,3.8,OK,
+simikaze,simikaze.zip,simikaze/simikaze/Simikaze_Patch.def,Shimakaze_ATM_R,AnToR_M,"11,22,2000",,13.7,3.8,OK,
